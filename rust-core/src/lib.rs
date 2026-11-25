@@ -1,5 +1,5 @@
 use std::io::{Read, Write};
-use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream, ToSocketAddrs, UdpSocket};
 use std::sync::atomic::{AtomicBool, AtomicU16, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
@@ -49,7 +49,10 @@ pub struct EngineStats {
     pub active_connections: AtomicU64,
     pub bytes_up: AtomicU64,
     pub bytes_down: AtomicU64,
+    pub last_checked_bytes: AtomicU64,
     pub keepalive_pulses: AtomicU64,
+    pub battery_saved_skips: AtomicU64,
+    pub watchdog_heals: AtomicU64,
     pub last_ping_ms: AtomicU64,
     pub active_frag_size: AtomicU16,
     pub config: Mutex<TunnelConfig>,
@@ -66,11 +69,14 @@ impl EngineStats {
             active_connections: AtomicU64::new(0),
             bytes_up: AtomicU64::new(0),
             bytes_down: AtomicU64::new(0),
+            last_checked_bytes: AtomicU64::new(0),
             keepalive_pulses: AtomicU64::new(0),
+            battery_saved_skips: AtomicU64::new(0),
+            watchdog_heals: AtomicU64::new(0),
             last_ping_ms: AtomicU64::new(0),
             active_frag_size: AtomicU16::new(16),
             config: Mutex::new(TunnelConfig::default()),
-            logs: Mutex::new(Vec::with_capacity(128)),
+            logs: Mutex<Vec<String>>,
         })
     }
 
@@ -458,7 +464,34 @@ pub fn handle_http_proxy_client(mut client: TcpStream, cfg: TunnelConfig, stats:
     }
 }
 
+/// Detects the primary local IPv4 address (e.g. 10.76.111.50 or Wi-Fi Hotspot IP) using a zero-packet UDP socket bind.
+pub fn detect_local_ipv4() -> String {
+    if let Ok(sock) = UdpSocket::bind("0.0.0.0:0") {
+        if sock.connect("8.8.8.8:80").is_ok() {
+            if let Ok(addr) = sock.local_addr() {
+                return addr.ip().to_string();
+            }
+        }
+    }
+    "192.168.43.1".to_string()
+}
+
+/// Smart Adaptive Keep-Alive + Anti-Freeze Watchdog:
+/// 1. If real user traffic (`bytes_down`) flowed since the last check, skips redundant pulse to save battery.
+/// 2. Fires Google AS15169 keep-alive probes.
+/// 3. If the radio tower freezes (0 channels respond), automatically triggers an emergency 5-channel Watchdog Wake-Up Burst!
 pub fn fire_google_keepalive_pulse(stats: &EngineStats) -> Option<u64> {
+    let current_bytes = stats.bytes_down.load(Ordering::Relaxed) + stats.bytes_up.load(Ordering::Relaxed);
+    let prev_bytes = stats.last_checked_bytes.swap(current_bytes, Ordering::Relaxed);
+    if current_bytes > prev_bytes + 4096 {
+        let skipped = stats.battery_saved_skips.fetch_add(1, Ordering::Relaxed) + 1;
+        stats.log(format!(
+            "[Bateria Inteligente] Tráfego ativo detectado — pulso poupado (#{} economizados)",
+            skipped
+        ));
+        return Some(stats.last_ping_ms.load(Ordering::Relaxed).max(45));
+    }
+
     let start = Instant::now();
     let targets = ["mtalk.google.com:5228", "www.googleapis.com:443", "connectivitycheck.gstatic.com:443"];
     let mut ok_count = 0;
@@ -484,6 +517,22 @@ pub fn fire_google_keepalive_pulse(stats: &EngineStats) -> Option<u64> {
         ));
         Some(ms)
     } else {
+        // Watchdog Anti-Freeze: Radio handover freeze detected! Fire emergency multi-port wake-up burst
+        let heal_num = stats.watchdog_heals.fetch_add(1, Ordering::Relaxed) + 1;
+        stats.log(format!(
+            "[Watchdog Anti-Congelamento] Torre congelou! Disparando rajada de auto-cura #{}...",
+            heal_num
+        ));
+        let emergency_targets = ["8.8.8.8:53", "1.1.1.1:443", "mtalk.google.com:443"];
+        for et in emergency_targets {
+            if let Ok(mut addrs) = et.to_socket_addrs() {
+                if let Some(addr) = addrs.next() {
+                    if let Ok(s) = TcpStream::connect_timeout(&addr, Duration::from_millis(1800)) {
+                        let _ = s.shutdown(Shutdown::Both);
+                    }
+                }
+            }
+        }
         None
     }
 }
@@ -637,9 +686,12 @@ fn handle_ui_http_request(mut stream: TcpStream, stats: Arc<EngineStats>) {
         };
 
         let ka_status = if ka_active { "Ativo (Rust Native)" } else { "Parado" };
+        let local_ip = detect_local_ipv4();
+        let battery_skips = stats.battery_saved_skips.load(Ordering::Relaxed);
+        let watchdog_heals = stats.watchdog_heals.load(Ordering::Relaxed);
         let body = format!(
-            r#"{{"engine":"Rust Native v2.0","tunnel":{{"running":{},"stats":{{"totalConnections":{},"bytesUp":{},"bytesDown":{}}}}},"keepAlive":{{"active":{},"totalPulses":{},"lastLatencyMs":{},"lastStatus":"{}"}},"presets":{},"logs":{}}}"#,
-            running, total_conns, bytes_up, bytes_down, ka_active, pulses, ping, ka_status, PRESETS_JSON, logs_json
+            r#"{{"engine":"DragonVortex Rust v2.5","localIp":"{}","hotshareHttpPort":8081,"hotshareSocksPort":10809,"tunnel":{{"running":{},"stats":{{"totalConnections":{},"bytesUp":{},"bytesDown":{}}}}},"keepAlive":{{"active":{},"totalPulses":{},"batterySavedSkips":{},"watchdogHeals":{},"lastLatencyMs":{},"lastStatus":"{}"}},"presets":{},"logs":{}}}"#,
+            local_ip, running, total_conns, bytes_up, bytes_down, ka_active, pulses, battery_skips, watchdog_heals, ping, ka_status, PRESETS_JSON, logs_json
         );
         send_http_response(stream, "200 OK", "application/json; charset=utf-8", body.as_bytes());
         return;

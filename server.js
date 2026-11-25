@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { PRESET_PAYLOADS, parsePayloadTemplate } = require('./engine/payload');
-const { CARRIER_SIGNATURES, runIpHuntCheck } = require('./engine/iphunter');
+const { CARRIER_SIGNATURES, runIpHuntCheck, inspectLocalInterfaces } = require('./engine/iphunter');
 const { SessionKeepAliveEngine } = require('./engine/keepalive');
 const { DEFAULT_SCAN_HOSTS, scanHostList } = require('./engine/scanner');
 const { TunnelProxyServer } = require('./engine/proxy');
@@ -64,7 +64,12 @@ function createControlServer() {
 
     // API Routes
     if (pathname === '/api/status' && req.method === 'GET') {
+      const localInfo = inspectLocalInterfaces();
       return sendJson(res, 200, {
+        engine: 'DragonVortex v2.5',
+        localIp: localInfo.primaryIpv4 || '192.168.43.1',
+        hotshareHttpPort: proxyServer.profile.httpPort || 8080,
+        hotshareSocksPort: proxyServer.profile.socksPort || 10808,
         tunnel: proxyServer.getStatus(),
         keepAlive: keepAlive.getStatus(),
         presets: PRESET_PAYLOADS,

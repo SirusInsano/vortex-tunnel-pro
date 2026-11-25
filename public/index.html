@@ -435,12 +435,35 @@
           <div id="statPing" class="val">-- ms</div>
         </div>
         <div class="q-box">
-          <div class="lbl">2º Plano</div>
-          <div id="statBg" class="val" style="color:var(--accent)">Blindado</div>
+          <div class="lbl">Watchdog 4.5G/5G</div>
+          <div id="statBg" class="val" style="color:var(--accent)">Auto-Cura ON</div>
         </div>
         <div class="q-box">
-          <div class="lbl">Auto-Update</div>
-          <div class="val">OTA Ativo</div>
+          <div class="lbl">Bateria Smart</div>
+          <div id="statBat" class="val">Ativa</div>
+        </div>
+      </div>
+
+      <!-- CARTÃO VISUAL DE HOTSHARE (COMPARTILHAR INTERNET P/ PC, TV, VIDEOGAME OU AMIGO) -->
+      <div class="card" style="padding:13px 15px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:0.84rem;font-weight:800;color:var(--cyan)">Compartilhar Internet (Wi-Fi / PC)</div>
+            <div style="font-size:0.73rem;color:var(--muted);margin-top:2px;">
+              Ligue o Roteador Wi-Fi e use este Proxy no PC ou TV:
+            </div>
+          </div>
+          <button class="ota-sync-btn" onclick="copyHotshareProxy()">Copiar IP</button>
+        </div>
+        <div style="margin-top:9px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:monospace;font-size:0.78rem;">
+          <div style="background:#080c14;padding:8px 10px;border-radius:9px;border:1px solid var(--border)">
+            <span style="color:var(--muted);font-size:0.68rem;display:block">Proxy HTTP (PC/Celular)</span>
+            <b id="hotshareHttpText" style="color:var(--accent)">192.168.43.1:8081</b>
+          </div>
+          <div style="background:#080c14;padding:8px 10px;border-radius:9px;border:1px solid var(--border)">
+            <span style="color:var(--muted);font-size:0.68rem;display:block">SOCKS5 (Jogos/Apps)</span>
+            <b id="hotshareSocksText" style="color:var(--cyan)">192.168.43.1:10809</b>
+          </div>
         </div>
       </div>
     </div>
@@ -472,6 +495,15 @@
         </select>
         <button class="magic-btn" style="margin-top:12px;background:linear-gradient(135deg,#00b0ff,#00e676)" onclick="runSubFinder()">DESCOBRIR SUBDOMÍNIOS ABERTOS</button>
         <div id="subFinderBox"></div>
+      </div>
+
+      <div class="card">
+        <h3>3. Diário Automático de IPs Premiados (Aprende pela Cidade)</h3>
+        <p style="font-size:0.78rem;color:var(--muted);line-height:1.4;margin-bottom:10px;">
+          Salva sozinho todas as rotas e antenas da Claro/Operadora que destravaram a sua linha enquanto você anda pela cidade.
+        </p>
+        <button class="ota-sync-btn" style="width:100%;padding:10px;margin-bottom:8px;" onclick="recordCurrentRouteToDiary(true)">Registrar Antena / IP Atual Agora</button>
+        <div id="routeDiaryBox"></div>
       </div>
     </div>
 
@@ -527,7 +559,7 @@
   </nav>
 
   <script>
-    const LOCAL_APP_BUILD = 24;
+    const LOCAL_APP_BUILD = 25;
     const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/SirusInsano/vortex-tunnel-pro/main';
 
     let state = {
@@ -640,7 +672,89 @@
         ]);
         const ms = Math.round(performance.now() - t0);
         document.getElementById('statPing').textContent = ms + ' ms';
+        document.getElementById('statBg').textContent = 'Auto-Cura ON';
+        recordCurrentRouteToDiary(false, ms);
+      } catch (e) {
+        // Watchdog client-side anti-freeze trigger
+        document.getElementById('statBg').textContent = 'Curando Torre...';
+        try { await fetch('/api/keepalive/burst', { method: 'POST' }); } catch (_) {}
+      }
+    }
+
+    function copyHotshareProxy() {
+      const txt = document.getElementById('hotshareHttpText').textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(txt);
+      }
+      const btn = event.target;
+      btn.textContent = 'Copiado ✓';
+      setTimeout(() => { btn.textContent = 'Copiar IP'; }, 1800);
+    }
+
+    function getRouteDiary() {
+      try {
+        const raw = localStorage.getItem('dragon_vortex_route_diary');
+        if (raw) return JSON.parse(raw);
       } catch (e) {}
+      // Seed with yonsko's initial verified Curitiba/Cruzeiro do Oeste Claro PR Fail-Open route
+      return [
+        {
+          publicIp: '179.68.107.236',
+          internalIp: '10.76.111.50',
+          org: 'AS4230 CLARO S.A.',
+          city: 'Curitiba / PR (Rota 130 Mbps)',
+          pingMs: 45,
+          savedAt: '25/11 10:20'
+        }
+      ];
+    }
+
+    function renderRouteDiary() {
+      const box = document.getElementById('routeDiaryBox');
+      if (!box) return;
+      const list = getRouteDiary();
+      box.innerHTML = list.map(item => `
+        <div class="vector-item open" style="margin-top:6px;">
+          <div>
+            <div style="font-size:0.81rem;font-weight:800;color:var(--accent)">★ Gateway: ${item.publicIp} (${item.internalIp || 'IPv4 Puro'})</div>
+            <div style="font-size:0.71rem;color:var(--muted)">${item.org || 'Claro BR'} • ${item.city || 'PR'} • Ping: ${item.pingMs || '--'}ms • ${item.savedAt}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    let lastDiaryCheck = 0;
+    async function recordCurrentRouteToDiary(manual = false, pingMs = 45) {
+      const now = Date.now();
+      if (!manual && now - lastDiaryCheck < 180000) return; // Auto-check every 3 minutes
+      lastDiaryCheck = now;
+      try {
+        const res = await fetch('https://ipinfo.io/json');
+        if (!res.ok) return;
+        const info = await res.json();
+        if (!info.ip) return;
+        const diary = getRouteDiary();
+        const exists = diary.find(d => d.publicIp === info.ip);
+        const nowStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        if (!exists) {
+          diary.unshift({
+            publicIp: info.ip,
+            internalIp: state.lastLocalIp || '10.76.x.x',
+            org: info.org || 'Operadora',
+            city: `${info.city || ''} / ${info.region || ''}`,
+            pingMs,
+            savedAt: `Hoje ${nowStr}`
+          });
+          localStorage.setItem('dragon_vortex_route_diary', JSON.stringify(diary.slice(0, 15)));
+        } else {
+          exists.pingMs = pingMs;
+          exists.savedAt = `Ativo ${nowStr}`;
+          localStorage.setItem('dragon_vortex_route_diary', JSON.stringify(diary));
+        }
+        renderRouteDiary();
+      } catch (e) {
+        renderRouteDiary();
+      }
     }
 
     async function startBothEngines() {
@@ -784,12 +898,24 @@
           }
         }
 
+        if (data.localIp) {
+          state.lastLocalIp = data.localIp;
+          const hPort = data.hotshareHttpPort || 8081;
+          const sPort = data.hotshareSocksPort || 10809;
+          const dispIp = data.localIp.startsWith('10.') ? '192.168.43.1' : data.localIp;
+          document.getElementById('hotshareHttpText').textContent = `${dispIp}:${hPort}`;
+          document.getElementById('hotshareSocksText').textContent = `${dispIp}:${sPort}`;
+        }
+        if (data.keepAlive && data.keepAlive.batterySavedSkips > 0) {
+          document.getElementById('statBat').textContent = `${data.keepAlive.batterySavedSkips} Poupados`;
+        }
         if (data.keepAlive && data.keepAlive.lastLatencyMs) {
           document.getElementById('statPing').textContent = data.keepAlive.lastLatencyMs + ' ms';
         }
       } catch (e) {}
     }
 
+    renderRouteDiary();
     refreshStatus();
     setInterval(refreshStatus, 2500);
     // Verifica novas brechas na nuvem a cada 5 minutos automaticamente
