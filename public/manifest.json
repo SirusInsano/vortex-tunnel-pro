@@ -1,7 +1,7 @@
 {
-  "name": "Vortex Tunnel Pro",
-  "short_name": "VortexPro",
-  "description": "Multi-Carrier Payload Injector, Split-TLS, Breach Hunter & Session Keep-Alive",
+  "name": "DragonVortex",
+  "short_name": "DragonVortex",
+  "description": "DragonVortex — Multi-Carrier Bypass, Split-TLS, Breach Hunter & Session Keep-Alive",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#07090e",

@@ -1,8 +1,8 @@
 {
-  "version": "2.3.0",
-  "build": 23,
-  "releasedAt": "2026-11-25T15:35:00Z",
+  "version": "2.4.0",
+  "build": 24,
+  "releasedAt": "2026-11-25T17:21:00Z",
   "apkUrl": "https://github.com/SirusInsano/vortex-tunnel-pro/releases/latest/download/VortexTunnelPro.apk",
   "exeUrl": "https://github.com/SirusInsano/vortex-tunnel-pro/releases/latest/download/vortex-core.exe",
-  "notes": "v2.3: Caçador de Subdomínios crt.sh + Corte Mid-SNI no Rust + Gerador Cloudflare Worker Grátis"
+  "notes": "DragonVortex v2.4: Novo Ícone Oficial DragonVortex + Auto-Update OTA + Segundo Plano Blindado"
 }

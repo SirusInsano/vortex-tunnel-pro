@@ -99,7 +99,7 @@ class VortexVpnService : VpnService() {
             }
 
             val notification = builder
-                .setContentTitle("Vortex Pro • Conexão Protegida")
+                .setContentTitle("DragonVortex • Conexão Protegida")
                 .setContentText("Motor Rust ativo em 2º plano (Segurando 4.5G/5G)")
                 .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
                 .setContentIntent(pendingIntent)
