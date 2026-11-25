@@ -1,8 +1,8 @@
 {
-  "version": "2.5.0",
-  "build": 25,
-  "releasedAt": "2026-11-25T18:58:00Z",
+  "version": "2.6.0",
+  "build": 26,
+  "releasedAt": "2026-11-25T19:08:00Z",
   "apkUrl": "https://github.com/SirusInsano/vortex-tunnel-pro/releases/latest/download/VortexTunnelPro.apk",
-  "exeUrl": "https://github.com/SirusInsano/vortex-tunnel-pro/releases/latest/download/vortex-core.exe",
-  "notes": "DragonVortex v2.5: Watchdog Anti-Congelamento + Diário Automático de IPs Premiados + Hotshare Wi-Fi Visual + Economia de Bateria"
+  "exeUrl": "https://github.com/SirusInsano/vortex-tunnel-pro/releases/latest/download/DragonVortex.exe",
+  "notes": "DragonVortex v2.6: Auto-Update 100% Interno (Hot-Update sem baixar outro APK) + Assinatura Fixa"
 }

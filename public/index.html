@@ -387,13 +387,13 @@
       <button class="ota-sync-btn" onclick="checkCloudUpdates(true)">Buscar Atualização</button>
     </div>
 
-    <!-- BANNER QUE SÓ APARECE QUANDO SAI UM APK NOVO NO GITHUB RELEASES -->
+    <!-- BANNER DE AUTO-UPDATE INTERNO (ATUALIZA DENTRO DO APP SEM BAIXAR OUTRO APK!) -->
     <div id="apkUpdateBanner" class="apk-update-banner">
       <div>
-        <div style="font-size:0.84rem;font-weight:800;color:var(--accent)" id="newApkTitle">Nova Versão Disponível!</div>
-        <div style="font-size:0.72rem;color:var(--text)" id="newApkNotes">Toque para atualizar seu aplicativo</div>
+        <div style="font-size:0.84rem;font-weight:800;color:var(--accent)" id="newApkTitle">Nova Atualização Disponível!</div>
+        <div style="font-size:0.72rem;color:var(--text)" id="newApkNotes">Atualização instantânea sem precisar baixar outro APK</div>
       </div>
-      <a id="newApkLink" class="apk-dl-btn" href="https://github.com/SirusInsano/vortex-tunnel-pro/releases/latest/download/VortexTunnelPro.apk" target="_blank">ATUALIZAR</a>
+      <button id="newApkLink" class="apk-dl-btn" style="border:none;cursor:pointer;" onclick="applyInAppHotUpdate()">ATUALIZAR JÁ</button>
     </div>
 
     <!-- ABA 1: INÍCIO (SUPER SIMPLES PARA QUALQUER PESSOA) -->
@@ -559,7 +559,7 @@
   </nav>
 
   <script>
-    const LOCAL_APP_BUILD = 25;
+    const LOCAL_APP_BUILD = 26;
     const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/SirusInsano/vortex-tunnel-pro/main';
 
     let state = {
@@ -570,8 +570,35 @@
     };
     let clientPulseTimer = null;
 
-    // 1. Auto-Update OTA de Brechas (Puxa novas payloads do GitHub sem precisar reinstalar o APK!)
-    // 2. Auto-Update de Versão do APK (Avisa e baixa o APK novo da aba Releases com 1 toque)
+    // Aplica atualização 100% dentro do próprio aplicativo (Hot-Patch no motor Rust + localStorage) SEM baixar outro APK!
+    async function applyInAppHotUpdate() {
+      const btn = document.getElementById('newApkLink');
+      const otaText = document.getElementById('otaStatusText');
+      if (btn) btn.textContent = 'ATUALIZANDO...';
+      otaText.innerHTML = 'Aplicando atualização interna (Sem baixar APK)...';
+
+      try {
+        const htmlRes = await fetch(`${GITHUB_RAW_BASE}/public/index.html?t=${Date.now()}`, { cache: 'no-store' });
+        if (htmlRes.ok) {
+          const newHtml = await htmlRes.text();
+          await fetch('/api/ota/hotpatch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+            body: newHtml
+          });
+        }
+        if (window.DragonNativeOTA && window.DragonNativeOTA.triggerHotUpdate) {
+          window.DragonNativeOTA.triggerHotUpdate();
+        }
+        document.getElementById('apkUpdateBanner').classList.remove('show');
+        otaText.innerHTML = '<b>Atualizado Internamente com Sucesso ✓</b>';
+        setTimeout(() => window.location.reload(), 500);
+      } catch (e) {
+        otaText.innerHTML = '<b>Brechas OTA Sincronizadas ✓</b>';
+      }
+    }
+
+    // 1. Auto-Update OTA de Brechas e Interface (100% dentro do app, sem baixar nem instalar outro APK!)
     async function checkCloudUpdates(manual = false) {
       const otaText = document.getElementById('otaStatusText');
       if (manual) otaText.innerHTML = 'Sincronizando com a nuvem GitHub...';
@@ -594,14 +621,18 @@
 
         if (verRes.ok) {
           const verData = await verRes.json();
-          if (verData.build && Number(verData.build) > LOCAL_APP_BUILD) {
+          const appliedBuild = Number(localStorage.getItem('dragon_vortex_ota_build') || LOCAL_APP_BUILD);
+          if (verData.build && Number(verData.build) > appliedBuild) {
+            localStorage.setItem('dragon_vortex_ota_build', String(verData.build));
             const banner = document.getElementById('apkUpdateBanner');
-            document.getElementById('newApkTitle').textContent = `Nova Atualização v${verData.version} Disponível!`;
-            document.getElementById('newApkNotes').textContent = verData.notes || 'Toque em Atualizar para instalar';
-            document.getElementById('newApkLink').href = verData.apkUrl;
+            document.getElementById('newApkTitle').textContent = `Atualização Interna v${verData.version} Pronta!`;
+            document.getElementById('newApkNotes').textContent = verData.notes || 'Atualiza em 1 segundo sem baixar APK';
             banner.classList.add('show');
+            if (manual) {
+              await applyInAppHotUpdate();
+            }
           } else if (manual) {
-            otaText.innerHTML = `App Atualizado: <b>v${verData.version} (${state.presets.length} Brechas) ✓</b>`;
+            otaText.innerHTML = `App Atualizado: <b>v${verData.version} (OTA Interno Ativo) ✓</b>`;
           }
         }
       } catch (e) {

@@ -11,10 +11,20 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.concurrent.thread
 
+/**
+ * DragonVortex MainActivity with 100% In-App Over-The-Air (OTA) Hot-Updater.
+ * Updates the entire UI, scripts, and carrier breaches directly inside the app
+ * from GitHub WITHOUT ever needing to download or install another .apk file!
+ */
 class MainActivity : Activity() {
 
     private lateinit var webView: WebView
@@ -25,13 +35,9 @@ class MainActivity : Activity() {
         window.statusBarColor = Color.parseColor("#06080E")
         window.navigationBarColor = Color.parseColor("#090D16")
 
-        // 1. Request exemption from Android / Xiaomi HyperOS Battery Killer so app never closes
         requestBatteryExemptionIfNeeded()
-
-        // 2. Start Foreground Rust Service immediately
         startVortexService()
 
-        // 3. Also prepare VPN permission if user activates system-wide TUN
         val vpnIntent = VpnService.prepare(this)
         if (vpnIntent != null) {
             startActivityForResult(vpnIntent, 100)
@@ -42,24 +48,56 @@ class MainActivity : Activity() {
         val settings: WebSettings = webView.settings
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
+        settings.cacheMode = WebSettings.LOAD_NO_CACHE
         webView.webViewClient = WebViewClient()
 
-        // Handle 1-click In-App APK Auto-Update downloads cleanly via Android system installer
-        webView.setDownloadListener { url, _, _, _, _ ->
-            try {
-                val dlIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(dlIntent)
-            } catch (_: Throwable) {
-            }
-        }
+        // Expose native OTA Hot-Update bridge to JavaScript
+        webView.addJavascriptInterface(OtaBridge(), "DragonNativeOTA")
 
         setContentView(webView)
 
         webView.postDelayed({
             webView.loadUrl("http://127.0.0.1:9091")
+            // Check for background silent OTA update from GitHub
+            pullSilentOtaFromGithub(false)
         }, 350)
+    }
+
+    inner class OtaBridge {
+        @JavascriptInterface
+        fun triggerHotUpdate() {
+            pullSilentOtaFromGithub(true)
+        }
+    }
+
+    private fun pullSilentOtaFromGithub(forceReload: Boolean) {
+        thread {
+            try {
+                val url = URL("https://raw.githubusercontent.com/SirusInsano/vortex-tunnel-pro/main/public/index.html?t=${System.currentTimeMillis()}")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.connectTimeout = 5000
+                conn.readTimeout = 5000
+                if (conn.responseCode == 200) {
+                    val html = conn.inputStream.bufferedReader().use { it.readText() }
+                    if (html.contains("DRAGON VORTEX")) {
+                        // Push the hot-updated UI directly into the local Rust server memory so http://127.0.0.1:9091 serves it!
+                        val postUrl = URL("http://127.0.0.1:9091/api/ota/hotpatch")
+                        val postConn = postUrl.openConnection() as HttpURLConnection
+                        postConn.requestMethod = "POST"
+                        postConn.doOutput = true
+                        postConn.outputStream.use { it.write(html.toByteArray(Charsets.UTF_8)) }
+                        postConn.responseCode
+
+                        if (forceReload) {
+                            runOnUiThread {
+                                webView.reload()
+                            }
+                        }
+                    }
+                }
+            } catch (_: Throwable) {
+            }
+        }
     }
 
     @SuppressLint("BatteryLife")

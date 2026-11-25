@@ -113,6 +113,14 @@ fn main() {
     start_embedded_ui_server(ui_port, Arc::clone(&stats)).expect("Erro iniciando WebUI Rust");
     start_proxy_listeners(cfg, Arc::clone(&stats)).expect("Erro iniciando Proxy Rust");
 
+    #[cfg(target_os = "windows")]
+    {
+        let url = format!("http://127.0.0.1:{}", ui_port);
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "start", "", &url])
+            .spawn();
+    }
+
     stats.keepalive_active.store(true, Ordering::SeqCst);
     let stats_ka = Arc::clone(&stats);
     thread::spawn(move || loop {
