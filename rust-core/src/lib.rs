@@ -171,6 +171,35 @@ pub fn parse_payload_template(template: &str, target_host: &str, target_port: u1
     steps
 }
 
+/// Inspects a TLS ClientHello record (`0x16 0x03 ...`) and finds the exact byte offset
+/// right in the middle of the SNI hostname string (Mid-SNI Desync) so DPI boxes fail to match the domain.
+pub fn find_tls_sni_mid_offset(data: &[u8]) -> Option<usize> {
+    // TLS Handshake record starts with 0x16 (Handshake), 0x03 (SSLv3/TLS), 0x01..0x04
+    if data.len() < 45 || data[0] != 0x16 || data[1] != 0x03 {
+        return None;
+    }
+    // Search for ASCII dot '.' inside the SNI extension region (bytes 40..min(len, 320))
+    let limit = data.len().min(320);
+    for i in 44..limit.saturating_sub(4) {
+        // Look for SNI host name type 0x00 followed by 2-byte length (3..64) and ASCII lowercase letters
+        if data[i] == 0x00 && data[i + 1] == 0x00 {
+            let name_len = data[i + 2] as usize;
+            if (4..=64).contains(&name_len) && i + 3 + name_len <= data.len() {
+                let name_slice = &data[i + 3..i + 3 + name_len];
+                if name_slice
+                    .iter()
+                    .all(|&b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-')
+                    && name_slice.contains(&b'.')
+                {
+                    // Cut right in the middle of the SNI hostname!
+                    return Some(i + 3 + (name_len / 2));
+                }
+            }
+        }
+    }
+    None
+}
+
 pub fn write_fragmented(
     stream: &mut TcpStream,
     data: &[u8],
@@ -178,6 +207,22 @@ pub fn write_fragmented(
     frag_delay_ms: u64,
 ) -> std::io::Result<()> {
     let _ = stream.set_nodelay(true);
+
+    // 1. If this is a TLS ClientHello with an SNI extension, split directly in the middle of the SNI hostname first!
+    if let Some(mid_sni) = find_tls_sni_mid_offset(data) {
+        if mid_sni > 2 && mid_sni < data.len() {
+            stream.write_all(&data[..mid_sni])?;
+            stream.flush()?;
+            if frag_delay_ms > 0 {
+                thread::sleep(Duration::from_millis(frag_delay_ms));
+            }
+            stream.write_all(&data[mid_sni..])?;
+            stream.flush()?;
+            return Ok(());
+        }
+    }
+
+    // 2. Fallback fixed-chunk fragmentation
     let step = frag_size.max(2);
     if data.len() <= step {
         stream.write_all(data)?;
@@ -681,6 +726,42 @@ fn handle_ui_http_request(mut stream: TcpStream, stats: Arc<EngineStats>) {
             ));
         }
         let body = format!(r#"{{"ok":true,"results":[{}]}}"#, rows.join(","));
+        send_http_response(stream, "200 OK", "application/json; charset=utf-8", body.as_bytes());
+        return;
+    }
+
+    if path == "/api/subfinder/crawl" && method == "POST" {
+        stats.log("[Rust SubFinder] Testando subdomínios de operadoras na porta 443...");
+        let subs = [
+            "m.claro.com.br",
+            "claroflex.com.br",
+            "minhaclaro.claro.com.br",
+            "recarga.claro.com.br",
+            "tim.com.br",
+            "recarga.tim.com.br",
+            "c6bank.com.br",
+            "meu.vivo.com.br",
+            "recarga.vivo.com.br",
+            "mhnet.com.br",
+        ];
+        let mut items = Vec::new();
+        let mut alive_count = 0;
+        for s in subs {
+            let (alive, ms, ip) = probe_tcp_host(s, 443, 2000);
+            if alive {
+                alive_count += 1;
+            }
+            items.push(format!(
+                r#"{{"domain":"{}","ip":"{}","alive":{},"cdn":"Cloud/CDN 443","latencyMs":{}}}"#,
+                s, ip, alive, ms
+            ));
+        }
+        let body = format!(
+            r#"{{"rootDomain":"multi","totalFound":{},"aliveCount":{},"results":[{}]}}"#,
+            subs.len(),
+            alive_count,
+            items.join(",")
+        );
         send_http_response(stream, "200 OK", "application/json; charset=utf-8", body.as_bytes());
         return;
     }

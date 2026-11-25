@@ -448,12 +448,30 @@
     <!-- ABA 2: DESCOBRIR BRECHA SOZINHO (1 BOTÃO) -->
     <div id="tab-auto" class="panel">
       <div class="card">
-        <h3>Busca Inteligente de Conexão</h3>
-        <p style="font-size:0.82rem;color:var(--muted);line-height:1.45;margin-bottom:14px;">
-          Não sabe qual modo escolher? Toque abaixo e o aplicativo testa sozinho todos os caminhos abertos no seu chip e configura para você.
+        <h3>1. Busca Inteligente de Brechas (6 Vetores)</h3>
+        <p style="font-size:0.81rem;color:var(--muted);line-height:1.45;margin-bottom:12px;">
+          Toque abaixo para o aplicativo testar sozinho os 6 caminhos (Fail-Open Google, IX.br, Cloudflare, CloudFront, Split-TLS Mid-SNI e DNS) e ativar o melhor.
         </p>
         <button class="magic-btn" onclick="runSmartFinder()">PROCURAR E ATIVAR MELHOR BRECHA</button>
         <div id="smartResultsBox"></div>
+      </div>
+
+      <div class="card">
+        <h3>2. Caçador de Subdomínios Novos (crt.sh SSL)</h3>
+        <p style="font-size:0.79rem;color:var(--muted);line-height:1.4;margin-bottom:8px;">
+          Descobre subdomínios recém-criados pela operadora ou parceiro nos certificados SSL e testa quais passam na porta 443.
+        </p>
+        <label>Domínio da Operadora ou Parceiro</label>
+        <select id="subRootSelect">
+          <option value="claro.com.br">claro.com.br (Claro BR)</option>
+          <option value="claroflex.com.br">claroflex.com.br (Claro Flex)</option>
+          <option value="tim.com.br">tim.com.br (TIM BR)</option>
+          <option value="c6bank.com.br">c6bank.com.br (Parceiro TIM/C6)</option>
+          <option value="vivo.com.br">vivo.com.br (Vivo BR)</option>
+          <option value="mhnet.com.br">mhnet.com.br (Peering Regional)</option>
+        </select>
+        <button class="magic-btn" style="margin-top:12px;background:linear-gradient(135deg,#00b0ff,#00e676)" onclick="runSubFinder()">DESCOBRIR SUBDOMÍNIOS ABERTOS</button>
+        <div id="subFinderBox"></div>
       </div>
     </div>
 
@@ -509,7 +527,7 @@
   </nav>
 
   <script>
-    const LOCAL_APP_BUILD = 22;
+    const LOCAL_APP_BUILD = 23;
     const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/SirusInsano/vortex-tunnel-pro/main';
 
     let state = {
@@ -679,6 +697,43 @@
         sel.value = presetId;
         applyPreset();
       }
+      switchTab('home', 0);
+      await startBothEngines();
+    }
+
+    async function runSubFinder() {
+      const box = document.getElementById('subFinderBox');
+      const rootDomain = document.getElementById('subRootSelect').value;
+      box.innerHTML = `<div style="text-align:center;color:var(--cyan);padding:10px;">Buscando certificados SSL de *.${rootDomain} e testando porta 443...</div>`;
+      try {
+        const res = await fetch('/api/subfinder/crawl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rootDomain })
+        });
+        const data = await res.json();
+        const list = (data.results || []).filter(r => r.alive);
+        if (list.length === 0) {
+          box.innerHTML = '<div style="color:var(--danger);font-size:0.8rem;padding:8px;">Nenhum subdomínio respondeu na porta 443.</div>';
+          return;
+        }
+        box.innerHTML = list.map(r => `
+          <div class="vector-item open">
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--accent)">✓ ${r.domain}</div>
+              <div style="font-size:0.72rem;color:var(--muted)">${r.ip || ''} • ${r.cdn || 'TLS 443'} (${r.latencyMs}ms)</div>
+            </div>
+            <button class="use-btn" onclick="useDiscoveredHost('${r.domain}')">Usar SNI</button>
+          </div>
+        `).join('');
+      } catch (e) {
+        box.innerHTML = '<div style="color:var(--danger);font-size:0.8rem;">Erro consultando subdomínios.</div>';
+      }
+    }
+
+    async function useDiscoveredHost(domain) {
+      document.getElementById('sniInput').value = domain;
+      document.getElementById('heroSubcaption').textContent = `Bug Host ativo: ${domain} (Mid-SNI Split)`;
       switchTab('home', 0);
       await startBothEngines();
     }

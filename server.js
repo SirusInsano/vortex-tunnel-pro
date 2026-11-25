@@ -8,6 +8,7 @@ const { SessionKeepAliveEngine } = require('./engine/keepalive');
 const { DEFAULT_SCAN_HOSTS, scanHostList } = require('./engine/scanner');
 const { TunnelProxyServer } = require('./engine/proxy');
 const { runMultiVectorBreachAudit } = require('./engine/breach_hunter');
+const { crawlAndProbeSubdomains } = require('./engine/subfinder');
 
 const logs = [];
 function addLog(msg) {
@@ -113,6 +114,22 @@ function createControlServer() {
       const body = await readJsonBody(req);
       const audit = await runMultiVectorBreachAudit(body.carrier || 'ALL', addLog);
       return sendJson(res, 200, audit);
+    }
+
+    if (pathname === '/api/subfinder/crawl' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const rootDomain = body.rootDomain || 'claro.com.br';
+      const report = await crawlAndProbeSubdomains(rootDomain, 18, addLog);
+      return sendJson(res, 200, report);
+    }
+
+    if (pathname === '/api/worker/code' && req.method === 'GET') {
+      const workerPath = path.join(__dirname, 'cloudflare-worker', 'worker.js');
+      fs.readFile(workerPath, 'utf8', (err, code) => {
+        if (err) return sendJson(res, 404, { ok: false });
+        return sendJson(res, 200, { ok: true, code });
+      });
+      return;
     }
 
     if (pathname === '/api/profile/export' && req.method === 'POST') {
