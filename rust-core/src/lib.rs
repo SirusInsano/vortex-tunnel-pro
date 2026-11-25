@@ -76,7 +76,7 @@ impl EngineStats {
             last_ping_ms: AtomicU64::new(0),
             active_frag_size: AtomicU16::new(16),
             config: Mutex::new(TunnelConfig::default()),
-            logs: Mutex<Vec<String>>,
+            logs: Mutex::new(Vec::with_capacity(128)),
         })
     }
 
