@@ -185,6 +185,24 @@ function createControlServer() {
       return sendJson(res, 200, { ok: true });
     }
 
+    // Direct 1-click download of the compiled Rust Android APK
+    if (pathname === '/apk' || pathname === '/VortexTunnelPro.apk') {
+      const apkPath = path.join(__dirname, 'apk', 'app-release.apk');
+      fs.readFile(apkPath, (err, content) => {
+        if (err) {
+          res.writeHead(404);
+          return res.end('APK not found');
+        }
+        res.writeHead(200, {
+          'Content-Type': 'application/vnd.android.package-archive',
+          'Content-Disposition': 'attachment; filename="VortexTunnelPro-Rust-ARM64.apk"',
+          'Content-Length': content.length
+        });
+        res.end(content);
+      });
+      return;
+    }
+
     // Static assets (PWA manifest & SVG icon & index.html)
     if (pathname === '/manifest.json') {
       const p = path.join(__dirname, 'public', 'manifest.json');
