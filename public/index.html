@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#070a10" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <title>Vortex Tunnel Pro — Multi-Carrier Bypass & Breach Hunter</title>
+  <style>
+    :root {
+      --bg: #07090f;
+      --bg-grad: radial-gradient(circle at 50% 0%, #102138 0%, #07090f 65%);
+      --card: rgba(18, 25, 38, 0.85);
+      --card-border: rgba(45, 62, 92, 0.65);
+      --accent: #00e676;
+      --accent-glow: rgba(0, 230, 118, 0.28);
+      --accent-dim: rgba(0, 230, 118, 0.12);
+      --cyan: #00b0ff;
+      --cyan-dim: rgba(0, 176, 255, 0.14);
+      --danger: #ff4757;
+      --warn: #ffa502;
+      --text: #f1f5f9;
+      --muted: #8b9bb4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      background-image: var(--bg-grad);
+      background-attachment: fixed;
+      color: var(--text);
+      padding-bottom: 90px;
+      min-height: 100vh;
+    }
+
+    /* TOP APP BAR */
+    header {
+      background: rgba(10, 14, 23, 0.88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 13px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.02rem;
+      letter-spacing: 0.7px;
+      background: linear-gradient(90deg, #00e676, #00b0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+    }
+    .badges {
+      display: flex;
+      gap: 6px;
+      font-size: 0.73rem;
+    }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 99px;
+      background: rgba(24, 34, 52, 0.9);
+      border: 1px solid var(--card-border);
+      color: var(--muted);
+      font-weight: 600;
+      transition: 0.2s;
+    }
+    .badge.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    /* HERO CONNECTION CORE */
+    .hero-core {
+      background: linear-gradient(145deg, rgba(19, 28, 46, 0.92), rgba(11, 16, 27, 0.95));
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    }
+    .power-ring {
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      border: 3px solid #293852;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      background: radial-gradient(circle, #141e30 0%, #0a0f18 100%);
+      transition: 0.25s;
+      position: relative;
+    }
+    .power-ring.on {
+      border-color: var(--accent);
+      box-shadow: 0 0 24px var(--accent-glow), inset 0 0 14px var(--accent-glow);
+    }
+    .power-ring svg {
+      width: 28px;
+      height: 28px;
+      fill: var(--muted);
+      transition: 0.25s;
+    }
+    .power-ring.on svg {
+      fill: var(--accent);
+      filter: drop-shadow(0 0 6px var(--accent));
+    }
+    .power-ring span {
+      font-size: 0.62rem;
+      font-weight: 800;
+      margin-top: 3px;
+      color: var(--muted);
+      letter-spacing: 0.6px;
+    }
+    .power-ring.on span { color: var(--accent); }
+
+    .hero-info { flex: 1; }
+    .hero-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hero-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .hero-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .metric-pill {
+      background: rgba(9, 13, 21, 0.75);
+      border: 1px solid rgba(45, 62, 92, 0.5);
+      border-radius: 10px;
+      padding: 6px 8px;
+    }
+    .metric-pill .lbl { font-size: 0.65rem; color: var(--muted); }
+    .metric-pill .val { font-size: 0.88rem; font-weight: 700; color: var(--cyan); margin-top: 2px; }
+
+    /* CARRIER FILTER CHIPS */
+    .carrier-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      scrollbar-width: none;
+    }
+    .carrier-bar::-webkit-scrollbar { display: none; }
+    .carrier-pill {
+      padding: 7px 14px;
+      border-radius: 99px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .carrier-pill.active {
+      background: var(--cyan-dim);
+      color: var(--cyan);
+      border-color: var(--cyan);
+    }
+
+    /* CARDS & PANELS */
+    .panel { display: none; animation: fadeIn 0.18s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+    }
+    .card h3 {
+      font-size: 0.94rem;
+      margin-bottom: 12px;
+      color: var(--cyan);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 600px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 5px;
+      margin-top: 10px;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: rgba(8, 12, 19, 0.9);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.86rem;
+      outline: none;
+      transition: 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--cyan);
+    }
+    textarea { min-height: 82px; resize: vertical; font-family: Consolas, monospace; font-size: 0.8rem; }
+
+    .tag-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .tag-chip {
+      background: rgba(0, 176, 255, 0.1);
+      border: 1px solid rgba(0, 176, 255, 0.35);
+      color: var(--cyan);
+      padding: 5px 10px;
+      border-radius: 7px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #00e676, #00c853);
+      color: #03140a;
+      border: none;
+      padding: 13px 16px;
+      border-radius: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 0.88rem;
+      width: 100%;
+      margin-top: 12px;
+      letter-spacing: 0.4px;
+      box-shadow: 0 4px 14px rgba(0, 230, 118, 0.25);
+      transition: 0.15s;
+    }
+    .btn:active { transform: scale(0.99); }
+    .btn.stop {
+      background: linear-gradient(135deg, #ff4757, #ff6b81);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(255, 71, 87, 0.3);
+    }
+    .btn.secondary {
+      background: rgba(29, 41, 61, 0.9);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      box-shadow: none;
+    }
+
+    /* BREACH VECTOR CARDS */
+    .vector-item {
+      background: rgba(10, 15, 24, 0.85);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .vector-item.open {
+      border-color: rgba(0, 230, 118, 0.55);
+      background: linear-gradient(90deg, rgba(0, 230, 118, 0.08), rgba(10, 15, 24, 0.9));
+    }
+    .vector-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 3px; }
+    .vector-desc { font-size: 0.75rem; color: var(--muted); }
+    .apply-mini-btn {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 7px 11px;
+      border-radius: 8px;
+      font-size: 0.73rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin-top: 8px;
+    }
+    .stat-box {
+      background: rgba(9, 13, 21, 0.85);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .stat-box .val {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-top: 4px;
+    }
+
+    .log-box {
+      background: #05070b;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px;
+      height: 165px;
+      overflow-y: auto;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      color: #80d8ff;
+      font-family: Consolas, monospace;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      margin-top: 10px;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    th { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; }
+    .pill-ok { color: var(--accent); font-weight: 700; }
+    .pill-fail { color: var(--danger); font-weight: 600; }
+
+    /* BOTTOM NAVIGATION BAR (NATIVE APP FEEL) */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10, 14, 23, 0.94);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--card-border);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 6px 4px 10px 4px;
+      z-index: 60;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 6px 2px;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: 0.15s;
+    }
+    .nav-item svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+      margin-bottom: 3px;
+    }
+    .nav-item.active {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="/icon.svg" class="brand-icon" alt="Vortex" />
+      <span>VORTEX PRO</span>
+    </div>
+    <div class="badges">
+      <span id="tunnelBadge" class="badge">Túnel: OFF</span>
+      <span id="keepAliveBadge" class="badge">Keep-Alive: OFF</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- HERO CORE WIDGET -->
+    <div class="hero-core">
+      <div id="powerRing" class="power-ring" onclick="toggleTunnel()">
+        <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+        <span id="powerText">OFF</span>
+      </div>
+      <div class="hero-info">
+        <div class="hero-title">
+          <span id="activeProfileTitle">Claro Flex — Sessão 10.76.x.x</span>
+        </div>
+        <div id="activeProfileSub" class="hero-sub">SOCKS5 :10808 &bull; HTTP Hotshare :8080 &bull; Split-TLS 16B</div>
+        <div class="hero-metrics">
+          <div class="metric-pill">
+            <div class="lbl">Ping Google</div>
+            <div id="heroPing" class="val">-- ms</div>
+          </div>
+          <div class="metric-pill">
+            <div class="lbl">Conexões</div>
+            <div id="heroConns" class="val">0</div>
+          </div>
+          <div class="metric-pill">
+            <div class="lbl">Tráfego</div>
+            <div id="heroTraffic" class="val">0 KB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: TUNNEL & MULTI-CARRIER PAYLOADS -->
+    <div id="tab-tunnel" class="panel active">
+      <div class="carrier-bar">
+        <div class="carrier-pill active" onclick="filterCarrier('ALL', this)">Todas (14)</div>
+        <div class="carrier-pill" onclick="filterCarrier('Claro BR', this)">Claro BR (5)</div>
+        <div class="carrier-pill" onclick="filterCarrier('TIM BR', this)">TIM BR (4)</div>
+        <div class="carrier-pill" onclick="filterCarrier('Vivo BR', this)">Vivo BR (3)</div>
+        <div class="carrier-pill" onclick="filterCarrier('Multi-Operadora', this)">Universal (2)</div>
+      </div>
+
+      <div class="card">
+        <h3>
+          <span>1. Selecionar Brecha / Payload</span>
+          <span id="presetBadge" style="font-size:0.72rem;background:var(--accent-dim);color:var(--accent);padding:3px 8px;border-radius:6px;">MAIS RÁPIDO</span>
+        </h3>
+
+        <label>Perfil de Operadora</label>
+        <select id="presetSelect" onchange="applyPreset()"></select>
+
+        <div class="grid-2">
+          <div>
+            <label>Motor de Injeção</label>
+            <select id="modeSelect">
+              <option value="direct_split">Split-TLS Direto (Fragmentação s/ VPS)</option>
+              <option value="http_payload">HTTP Proxy + Payload Injection</option>
+              <option value="ssl_sni">SSL/TLS + Spoof SNI (Stunnel)</option>
+              <option value="ssl_payload_ws">SSL/TLS + SNI + WebSocket (CDN)</option>
+            </select>
+          </div>
+          <div>
+            <label>Bug Host / SNI</label>
+            <input id="sniInput" type="text" value="www.googleapis.com" placeholder="Ex: m.claro.com.br" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label>Servidor SSH/WS ou IP CDN (Opcional)</label>
+            <input id="serverHostInput" type="text" placeholder="Vazio = Conexão Direta Split-TLS" />
+          </div>
+          <div>
+            <label>Porta</label>
+            <input id="serverPortInput" type="number" value="443" />
+          </div>
+        </div>
+
+        <label>Editor de Payload Customizada</label>
+        <textarea id="payloadInput" placeholder="GET / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf][crlf]"></textarea>
+        <div class="tag-bar">
+          <span class="tag-chip" onclick="insertTag('[crlf]')">[crlf]</span>
+          <span class="tag-chip" onclick="insertTag('[split]')">[split]</span>
+          <span class="tag-chip" onclick="insertTag('[instant_split]')">[instant_split]</span>
+          <span class="tag-chip" onclick="insertTag('[delay_split]')">[delay_split]</span>
+          <span class="tag-chip" onclick="insertTag('[host_port]')">[host_port]</span>
+          <span class="tag-chip" onclick="insertTag('[host]')">[host]</span>
+          <span class="tag-chip" onclick="insertTag('[ua]')">[ua]</span>
+        </div>
+
+        <div class="grid-2" style="margin-top:6px;">
+          <div>
+            <label>Fragmentação TLS ClientHello (Bytes)</label>
+            <input id="fragSizeInput" type="number" value="16" />
+          </div>
+          <div>
+            <label>Hotshare (Roteador Proxy p/ PC & Wi-Fi)</label>
+            <select id="hotshareSelect">
+              <option value="true">Ativado — 0.0.0.0:10808 e :8080</option>
+              <option value="false">Apenas Local (127.0.0.1)</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="tunnelBtn" class="btn" onclick="toggleTunnel()">CONECTAR TÚNEL AGORA</button>
+      </div>
+    </div>
+
+    <!-- TAB 2: AUTO BREACH HUNTER (6 VECTORS) -->
+    <div id="tab-breach" class="panel">
+      <div class="card">
+        <h3>
+          <span>Caçador Automático de Brechas (6 Vetores)</span>
+          <span style="font-size:0.74rem;color:var(--accent)">Claro &bull; TIM &bull; Vivo</span>
+        </h3>
+        <p style="font-size:0.8rem;color:var(--muted);line-height:1.45;margin-bottom:10px;">
+          Testa automaticamente os <b>6 principais métodos de bypass</b> na sua linha atual
+          (Fail-Open Google AS15169, Peering Regional IX.br/Tailscale, Cloudflare WebSocket,
+          Portais CloudFront/Azion, Fragmentação Split-TLS e Túnel DNS Recursivo) e aplica a melhor brecha com 1 toque.
+        </p>
+
+        <button class="btn" onclick="runBreachAudit()">ESCANEAR TODAS AS BRECHAS NA REDE ATUAL</button>
+
+        <div id="breachVectorsBox" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <!-- TAB 3: CLARO SESSION KEEP-ALIVE -->
+    <div id="tab-keepalive" class="panel">
+      <div class="card">
+        <h3>
+          <span>Segurador de Sessão (Fail-Open Keep-Alive)</span>
+          <span style="font-size:0.75rem;color:var(--accent)">AS15169 Trigger</span>
+        </h3>
+        <p style="font-size:0.8rem;color:var(--muted);line-height:1.45;">
+          Mantém conexões <b>HTTP/2 (h2)</b>, <b>FCM TLS 1.3 (mtalk.google.com:5228)</b> e
+          <b>Gstatic 204</b> pulsando a cada 20s tanto no servidor quanto direto no navegador do seu celular,
+          segurando sua sessão <code>10.76.111.50</code> aberta em 4.5G e 5G.
+        </p>
+
+        <div class="stat-row">
+          <div class="stat-box">
+            <div style="font-size:0.72rem;color:var(--muted)">Estado</div>
+            <div id="kaStatus" class="val">Parado</div>
+          </div>
+          <div class="stat-box">
+            <div style="font-size:0.72rem;color:var(--muted)">Pulsos</div>
+            <div id="kaPulses" class="val">0</div>
+          </div>
+          <div class="stat-box">
+            <div style="font-size:0.72rem;color:var(--muted)">Ping Google</div>
+            <div id="kaLatency" class="val">-- ms</div>
+          </div>
+        </div>
+
+        <label>Intervalo entre Pulsos (Segundos)</label>
+        <input id="kaIntervalInput" type="number" value="20" />
+
+        <div class="grid-2">
+          <button class="btn secondary" onclick="fireBurstNow()">DISPARAR PULSO GOOGLE AGORA</button>
+          <button id="kaToggleBtn" class="btn" onclick="toggleKeepAlive()">ATIVAR KEEP-ALIVE AUTOMÁTICO</button>
+        </div>
+
+        <div id="kaChannelsBox" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- TAB 4: IP HUNTER & CDN SCANNER -->
+    <div id="tab-iphunter" class="panel">
+      <div class="card">
+        <h3>IP Hunter — Rota Destravada (Claro / TIM / Vivo)</h3>
+        <label>Faixas de IP Premiado (Separadas por ;)</label>
+        <input id="hunterPrefixes" type="text" value="10.76.111.;10.76.;179.68.107.;100.64." />
+        <button class="btn" onclick="runIpHunter()">ANALISAR MEU IP E ROTA 4.5G / 5G</button>
+        <div id="hunterResultBox" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="card">
+        <h3>Scanner de Bug Hosts & CDNs</h3>
+        <label>Domínios para testar (1 por linha)</label>
+        <textarea id="scanDomainsInput">www.googleapis.com
+connectivitycheck.gstatic.com
+mtalk.google.com
+mhnet.com.br
+claroflex.com.br
+m.claro.com.br
+tim.com.br
+c6bank.com.br
+meu.vivo.com.br
+recarga.vivo.com.br
+whatsapp.com</textarea>
+        <button class="btn secondary" onclick="runScanner()">TESTAR BUG HOSTS NA PORTA 443</button>
+        <div id="scannerTableWrap" style="overflow-x:auto;margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- TAB 5: .VTX CONFIG SHARE & LOGS -->
+    <div id="tab-config" class="panel">
+      <div class="card">
+        <h3>Exportar / Importar Perfil (.VTX)</h3>
+        <p style="font-size:0.79rem;color:var(--muted);margin-bottom:8px;">
+          Salve ou compartilhe suas configurações de brecha no formato compacto <code>vtx://</code> (estilo <code>.ehi</code> / <code>.sks</code>).
+        </p>
+        <label>Nome do Perfil</label>
+        <input id="vtxNameInput" type="text" value="Claro PR 130Mbps Fail-Open" />
+
+        <div class="grid-2">
+          <button class="btn secondary" onclick="exportVtxProfile()">GERAR CÓDIGO .VTX</button>
+          <button class="btn" onclick="importVtxProfile()">IMPORTAR CÓDIGO .VTX</button>
+        </div>
+
+        <label>Código .VTX</label>
+        <textarea id="vtxCodeBox" placeholder="Clique em Gerar Código .VTX ou cole um código vtx:// aqui para importar"></textarea>
+      </div>
+
+      <div class="card">
+        <h3>
+          <span>Console de Eventos em Tempo Real</span>
+          <span style="font-size:0.75rem;cursor:pointer;color:var(--muted)" onclick="clearLogs()">Limpar</span>
+        </h3>
+        <div id="logBox" class="log-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NATIVE-STYLE BOTTOM NAVIGATION -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('tunnel', 0)">
+      <svg viewBox="0 0 24 24"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+      <span>Túnel</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('breach', 1)">
+      <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+      <span>Brechas</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('keepalive', 2)">
+      <svg viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+      <span>Segurar</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('iphunter', 3)">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <span>Hunter</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('config', 4)">
+      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      <span>Perfis/Log</span>
+    </div>
+  </nav>
+
+  <script>
+    let appState = {
+      presets: [],
+      selectedCarrier: 'ALL',
+      tunnelRunning: false,
+      keepAliveRunning: false,
+      presetsInitialized: false
+    };
+    let clientKeepAliveTimer = null;
+
+    function switchTab(name, idx) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      document.querySelectorAll('.nav-item')[idx].classList.add('active');
+    }
+
+    function filterCarrier(carrier, pillEl) {
+      appState.selectedCarrier = carrier;
+      document.querySelectorAll('.carrier-pill').forEach(p => p.classList.remove('active'));
+      if (pillEl) pillEl.classList.add('active');
+      populatePresetSelect();
+    }
+
+    function populatePresetSelect(selectedId) {
+      const select = document.getElementById('presetSelect');
+      const currentVal = selectedId || select.value;
+      const list = appState.selectedCarrier === 'ALL'
+        ? appState.presets
+        : appState.presets.filter(p => p.carrier === appState.selectedCarrier);
+
+      select.innerHTML = list.map(p =>
+        `<option value="${p.id}">[${p.carrier}] ${p.name}</option>`
+      ).join('');
+
+      if (currentVal && list.some(p => p.id === currentVal)) {
+        select.value = currentVal;
+      }
+      applyPreset();
+    }
+
+    function applyPreset() {
+      const id = document.getElementById('presetSelect').value;
+      const preset = appState.presets.find(p => p.id === id);
+      if (!preset) return;
+      document.getElementById('modeSelect').value = preset.mode;
+      document.getElementById('sniInput').value = preset.sni || '';
+      document.getElementById('payloadInput').value = preset.payload || '';
+      document.getElementById('fragSizeInput').value = preset.fragmentSize || 16;
+      document.getElementById('presetBadge').textContent = preset.badge || preset.carrier;
+      document.getElementById('activeProfileTitle').textContent = preset.name;
+      document.getElementById('activeProfileSub').textContent =
+        `SNI: ${preset.sni || 'Direto'} • Split-TLS ${preset.fragmentSize || 16}B • :10808/:8080`;
+    }
+
+    function selectPresetById(presetId) {
+      appState.selectedCarrier = 'ALL';
+      document.querySelectorAll('.carrier-pill').forEach((p, i) => {
+        p.className = i === 0 ? 'carrier-pill active' : 'carrier-pill';
+      });
+      populatePresetSelect(presetId);
+      switchTab('tunnel', 0);
+    }
+
+    function insertTag(tag) {
+      const el = document.getElementById('payloadInput');
+      const start = el.selectionStart || el.value.length;
+      el.value = el.value.slice(0, start) + tag + el.value.slice(start);
+      el.focus();
+    }
+
+    // Dispara pulso Google AS15169 direto do rádio 4.5G/5G do celular
+    async function fireClientSideGooglePulse() {
+      const t0 = performance.now();
+      try {
+        await Promise.all([
+          fetch('https://connectivitycheck.gstatic.com/generate_204?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store' }),
+          fetch('https://www.googleapis.com/generate_204?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store' })
+        ]);
+        const ms = Math.round(performance.now() - t0);
+        document.getElementById('heroPing').textContent = ms + ' ms';
+      } catch (e) {}
+    }
+
+    function syncClientKeepAlive(active) {
+      if (active && !clientKeepAliveTimer) {
+        fireClientSideGooglePulse();
+        clientKeepAliveTimer = setInterval(fireClientSideGooglePulse, 20000);
+      } else if (!active && clientKeepAliveTimer) {
+        clearInterval(clientKeepAliveTimer);
+        clientKeepAliveTimer = null;
+      }
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes < 1024) return (bytes || 0) + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(2) + ' MB';
+    }
+
+    async function refreshStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        appState.presets = data.presets || [];
+        if (!appState.presetsInitialized && appState.presets.length > 0) {
+          appState.presetsInitialized = true;
+          populatePresetSelect('claro_direct_split');
+        }
+
+        appState.tunnelRunning = data.tunnel.running;
+        appState.keepAliveRunning = data.keepAlive.active;
+        syncClientKeepAlive(appState.keepAliveRunning);
+
+        const isOnline = appState.tunnelRunning || appState.keepAliveRunning;
+        const ring = document.getElementById('powerRing');
+        ring.className = isOnline ? 'power-ring on' : 'power-ring';
+        document.getElementById('powerText').textContent = isOnline ? 'ATIVO' : 'OFF';
+
+        const tBadge = document.getElementById('tunnelBadge');
+        tBadge.textContent = appState.tunnelRunning ? 'Túnel: ON' : 'Túnel: OFF';
+        tBadge.className = appState.tunnelRunning ? 'badge active' : 'badge';
+
+        const kBadge = document.getElementById('keepAliveBadge');
+        kBadge.textContent = appState.keepAliveRunning ? 'Keep-Alive: ON' : 'Keep-Alive: OFF';
+        kBadge.className = appState.keepAliveRunning ? 'badge active' : 'badge';
+
+        const tBtn = document.getElementById('tunnelBtn');
+        tBtn.textContent = appState.tunnelRunning ? 'DESCONECTAR TÚNEL' : 'CONECTAR TÚNEL AGORA';
+        tBtn.className = appState.tunnelRunning ? 'btn stop' : 'btn';
+
+        const kBtn = document.getElementById('kaToggleBtn');
+        kBtn.textContent = appState.keepAliveRunning ? 'PARAR KEEP-ALIVE' : 'ATIVAR KEEP-ALIVE AUTOMÁTICO';
+        kBtn.className = appState.keepAliveRunning ? 'btn stop' : 'btn';
+
+        document.getElementById('kaStatus').textContent = data.keepAlive.lastStatus;
+        document.getElementById('kaPulses').textContent = data.keepAlive.totalPulses;
+        const pingText = data.keepAlive.lastLatencyMs ? data.keepAlive.lastLatencyMs + ' ms' : '-- ms';
+        document.getElementById('kaLatency').textContent = pingText;
+        if (data.keepAlive.lastLatencyMs) {
+          document.getElementById('heroPing').textContent = pingText;
+        }
+
+        const st = data.tunnel.stats || {};
+        document.getElementById('heroConns').textContent = st.totalConnections || 0;
+        document.getElementById('heroTraffic').textContent = formatBytes((st.bytesUp || 0) + (st.bytesDown || 0));
+
+        const logBox = document.getElementById('logBox');
+        if (logBox) {
+          logBox.innerHTML = (data.logs || []).map(l => `<div>${l}</div>`).join('');
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+      } catch (e) {}
+    }
+
+    async function toggleTunnel() {
+      if (appState.tunnelRunning) {
+        await fetch('/api/tunnel/stop', { method: 'POST' });
+      } else {
+        const body = {
+          mode: document.getElementById('modeSelect').value,
+          sni: document.getElementById('sniInput').value,
+          serverHost: document.getElementById('serverHostInput').value,
+          serverPort: Number(document.getElementById('serverPortInput').value) || 443,
+          payload: document.getElementById('payloadInput').value,
+          tlsFragment: true,
+          fragmentSize: Number(document.getElementById('fragSizeInput').value) || 16,
+          hotshare: document.getElementById('hotshareSelect').value === 'true'
+        };
+        await fetch('/api/tunnel/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+      }
+      refreshStatus();
+    }
+
+    async function runBreachAudit() {
+      const box = document.getElementById('breachVectorsBox');
+      box.innerHTML = '<div style="color:var(--warn);padding:10px;">Testando os 6 vetores de brecha na sua rede atual...</div>';
+      const res = await fetch('/api/breach/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ carrier: appState.selectedCarrier })
+      });
+      const data = await res.json();
+      const vectors = data.vectors || [];
+      box.innerHTML = `
+        <div style="margin-bottom:10px;font-size:0.82rem;font-weight:700;color:var(--accent)">
+          Resultado: ${data.openCount}/${data.totalVectors} Vetores de Brecha Abertos!
+        </div>
+        ${vectors.map(v => `
+          <div class="vector-item ${v.open ? 'open' : ''}">
+            <div>
+              <div class="vector-title" style="color:${v.open ? 'var(--accent)' : 'var(--danger)'}">
+                ${v.open ? '● ' : '✕ '}${v.name} (${v.latencyMs}ms)
+              </div>
+              <div class="vector-desc">${v.detail}</div>
+            </div>
+            ${v.open && v.recommendedPreset ? `
+              <button class="apply-mini-btn" onclick="selectPresetById('${v.recommendedPreset}')">
+                Usar Brecha
+              </button>
+            ` : ''}
+          </div>
+        `).join('')}
+      `;
+      refreshStatus();
+    }
+
+    async function fireBurstNow() {
+      const box = document.getElementById('kaChannelsBox');
+      box.innerHTML = '<div style="color:var(--warn)">Disparando handshake nos 3 canais da Google...</div>';
+      fireClientSideGooglePulse();
+      const res = await fetch('/api/keepalive/burst', { method: 'POST' });
+      const data = await res.json();
+      const channels = data.channels || [];
+      box.innerHTML = `
+        <table>
+          <thead><tr><th>Canal Google (AS15169)</th><th>Status</th><th>Ping</th></tr></thead>
+          <tbody>
+            ${channels.map(c => `
+              <tr>
+                <td>${c.endpoint}</td>
+                <td class="${c.ok ? 'pill-ok' : 'pill-fail'}">${c.ok ? 'OK' : (c.error || 'Falha')}</td>
+                <td>${c.latencyMs ? c.latencyMs + ' ms' : '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      refreshStatus();
+    }
+
+    async function toggleKeepAlive() {
+      if (appState.keepAliveRunning) {
+        await fetch('/api/keepalive/stop', { method: 'POST' });
+      } else {
+        const intervalSec = Number(document.getElementById('kaIntervalInput').value) || 20;
+        await fetch('/api/keepalive/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intervalSec })
+        });
+      }
+      refreshStatus();
+    }
+
+    async function runIpHunter() {
+      const box = document.getElementById('hunterResultBox');
+      box.innerHTML = '<div style="color:var(--warn)">Consultando IP do Celular (4.5G/5G) e Gateway...</div>';
+      const prefixes = document.getElementById('hunterPrefixes').value;
+
+      let phonePublic = null;
+      try {
+        const pRes = await fetch('https://ipinfo.io/json');
+        if (pRes.ok) phonePublic = await pRes.json();
+      } catch (e) {}
+
+      const res = await fetch('/api/iphunter/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prefixes,
+          simulatedPublicIp: phonePublic && phonePublic.ip ? phonePublic.ip : undefined
+        })
+      });
+      const r = await res.json();
+      const displayPub = phonePublic && phonePublic.ip ? phonePublic : r.public;
+      box.innerHTML = `
+        <div class="stat-row">
+          <div class="stat-box">
+            <div style="font-size:0.72rem;color:var(--muted)">IP Celular (4.5G/5G)</div>
+            <div class="val">${displayPub.ip || 'Offline'}</div>
+          </div>
+          <div class="stat-box">
+            <div style="font-size:0.72rem;color:var(--muted)">Operadora</div>
+            <div class="val" style="font-size:0.82rem">${displayPub.org || '-'}</div>
+          </div>
+          <div class="stat-box">
+            <div style="font-size:0.72rem;color:var(--muted)">Pilha IPv4 Puro</div>
+            <div class="val">${r.local.ipv4OnlySession ? 'SIM' : 'Dual-Stack'}</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:0.8rem;background:#0a0e17;padding:12px;border-radius:10px;line-height:1.5;">
+          <div><b>Rota do Celular:</b> ${displayPub.ip || '-'} — ${displayPub.org || '-'} (${displayPub.city || ''} / ${displayPub.region || ''})</div>
+          <div><b>Gateway do PC (Casa):</b> ${r.public.ip || '-'} (${r.public.org || '-'})</div>
+          <div><b>Score Assinatura Claro Fail-Open:</b> <span class="pill-ok">${r.claroFailOpenScore}%</span></div>
+          ${r.reasons.map(msg => `<div style="color:var(--accent)">• ${msg}</div>`).join('')}
+        </div>
+      `;
+      refreshStatus();
+    }
+
+    async function runScanner() {
+      const wrap = document.getElementById('scannerTableWrap');
+      wrap.innerHTML = '<div style="color:var(--warn)">Escaneando hosts e CDNs na porta 443...</div>';
+      const domains = document.getElementById('scanDomainsInput').value;
+      const res = await fetch('/api/scanner/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domains })
+      });
+      const data = await res.json();
+      const rows = (data.results || []).map(r => `
+        <tr>
+          <td><b>${r.domain}</b><br/><span style="color:var(--muted);font-size:0.7rem">${r.ip || '-'}</span></td>
+          <td class="${r.alive ? 'pill-ok' : 'pill-fail'}">${r.alive ? (r.statusCode || 'TLS OK') : (r.error || 'Off')}</td>
+          <td>${r.cdn || '-'}</td>
+          <td>${r.latencyMs ? r.latencyMs + ' ms' : '-'}</td>
+        </tr>
+      `).join('');
+      wrap.innerHTML = `
+        <table>
+          <thead><tr><th>Host / IP</th><th>Status</th><th>CDN</th><th>Ping</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+      refreshStatus();
+    }
+
+    async function exportVtxProfile() {
+      const body = {
+        name: document.getElementById('vtxNameInput').value,
+        mode: document.getElementById('modeSelect').value,
+        sni: document.getElementById('sniInput').value,
+        serverHost: document.getElementById('serverHostInput').value,
+        serverPort: Number(document.getElementById('serverPortInput').value) || 443,
+        payload: document.getElementById('payloadInput').value,
+        fragmentSize: Number(document.getElementById('fragSizeInput').value) || 16
+      };
+      const res = await fetch('/api/profile/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.vtxCode) {
+        document.getElementById('vtxCodeBox').value = data.vtxCode;
+      }
+      refreshStatus();
+    }
+
+    async function importVtxProfile() {
+      const vtxCode = document.getElementById('vtxCodeBox').value;
+      const res = await fetch('/api/profile/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vtxCode })
+      });
+      const data = await res.json();
+      if (data.ok && data.profile) {
+        const p = data.profile;
+        document.getElementById('modeSelect').value = p.mode || 'direct_split';
+        document.getElementById('sniInput').value = p.sni || '';
+        document.getElementById('serverHostInput').value = p.serverHost || '';
+        document.getElementById('serverPortInput').value = p.serverPort || 443;
+        document.getElementById('payloadInput').value = p.payload || '';
+        document.getElementById('fragSizeInput').value = p.fragmentSize || 16;
+        document.getElementById('activeProfileTitle').textContent = p.name || 'Perfil Importado';
+        switchTab('tunnel', 0);
+      }
+      refreshStatus();
+    }
+
+    async function clearLogs() {
+      await fetch('/api/logs/clear', { method: 'POST' });
+      refreshStatus();
+    }
+
+    refreshStatus();
+    setInterval(refreshStatus, 2500);
+  </script>
+</body>
+</html>

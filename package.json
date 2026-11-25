@@ -1,0 +1,20 @@
+{
+  "name": "vortex-tunnel",
+  "version": "1.0.0",
+  "description": "Multi-mode HTTP Payload Injector, TLS/SNI Fragmentation Tunnel, IP Hunter (Claro/TIM), Google Session Keep-Alive & Hotshare Proxy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "tunnel",
+    "proxy",
+    "socks5",
+    "sni",
+    "payload",
+    "iphunter",
+    "hotshare"
+  ],
+  "license": "MIT"
+}
