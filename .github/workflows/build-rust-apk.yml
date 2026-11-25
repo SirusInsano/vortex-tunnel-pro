@@ -5,6 +5,9 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows-rust:
     name: "1. Compilar Motor Rust p/ Windows (.EXE)"
@@ -28,7 +31,7 @@ jobs:
           path: rust-core/target/release/vortex-core.exe
 
   build-android-rust-apk:
-    name: "2. Compilar Rust ARM64 (libvortex_core.so) + Empacotar APK Android"
+    name: "2. Compilar Rust ARM64 (libvortex_core.so) + Empacotar APK + Publicar Release"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,13 +62,26 @@ jobs:
           gradle-version: '8.5'
           cache-disabled: true
 
-      - name: Gerar APK Assinado (VortexTunnelPro-Rust-ARM64.apk)
+      - name: Gerar APK Assinado (VortexTunnelPro.apk)
         working-directory: android
         run: |
           gradle assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../VortexTunnelPro.apk
 
-      - name: Publicar APK Android c/ Motor Rust Embutido
+      - name: Publicar APK Android nos Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: VortexTunnelPro-Android-Rust-APK
-          path: android/app/build/outputs/apk/release/*.apk
+          path: VortexTunnelPro.apk
+
+      - name: Publicar Link Direto no GitHub Releases (latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Vortex Tunnel Pro v2.2 (Rust Core ARM64 + Auto-Update OTA)"
+          body: |
+            ### Download Direto (Sem precisar de Tailscale):
+            - 📱 **Android APK (Motor Rust ARM64 + Auto-Update OTA):** Baixe `VortexTunnelPro.apk` abaixo.
+          prerelease: false
+          files: |
+            VortexTunnelPro.apk

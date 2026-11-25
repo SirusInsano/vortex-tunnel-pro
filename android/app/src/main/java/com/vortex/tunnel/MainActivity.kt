@@ -43,6 +43,18 @@ class MainActivity : Activity() {
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         webView.webViewClient = WebViewClient()
+
+        // Handle 1-click In-App APK Auto-Update downloads cleanly via Android system installer
+        webView.setDownloadListener { url, _, _, _, _ ->
+            try {
+                val dlIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(dlIntent)
+            } catch (_: Throwable) {
+            }
+        }
+
         setContentView(webView)
 
         webView.postDelayed({

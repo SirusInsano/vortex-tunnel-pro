@@ -1,0 +1,146 @@
+{
+  "configVersion": 22,
+  "updatedAt": "2026-11-25T15:08:00Z",
+  "presets": [
+    {
+      "id": "claro_direct_split",
+      "name": "Claro Flex / Pré — Sessão 10.76.x.x (Fail-Open Google + Split-TLS 16B)",
+      "carrier": "Claro BR",
+      "badge": "MAIS RÁPIDO (130~800 Mbps)",
+      "mode": "direct_split",
+      "sni": "www.googleapis.com",
+      "payload": "",
+      "fragmentSize": 16
+    },
+    {
+      "id": "claro_tailscale_bridge",
+      "name": "Claro — Ponte Peering Regional IX.br / Tailscale Gigabit",
+      "carrier": "Claro BR",
+      "badge": "PONTE FIBRA CASA",
+      "mode": "direct_split",
+      "sni": "mhnet.com.br",
+      "payload": "",
+      "fragmentSize": 12
+    },
+    {
+      "id": "claro_ws_cdn",
+      "name": "Claro — CDN Cloudflare WebSocket + SNI Micro-Fragment 8B",
+      "carrier": "Claro BR",
+      "badge": "CDN FRONTING",
+      "mode": "ssl_payload_ws",
+      "sni": "m.claro.com.br",
+      "payload": "GET / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf][crlf]",
+      "fragmentSize": 8
+    },
+    {
+      "id": "claro_flex_portal",
+      "name": "Claro — Portal Claro Flex / Minha Claro Zero-Rating SNI",
+      "carrier": "Claro BR",
+      "badge": "ZERO-RATING",
+      "mode": "ssl_sni",
+      "sni": "claroflex.com.br",
+      "payload": "CONNECT [host_port] HTTP/1.1[crlf]Host: claroflex.com.br[crlf][crlf]",
+      "fragmentSize": 14
+    },
+    {
+      "id": "claro_akamai_music",
+      "name": "Claro — Claro Música / Claro TV+ (Akamai / CloudFront Split)",
+      "carrier": "Claro BR",
+      "badge": "AKAMAI / AWS",
+      "mode": "http_payload",
+      "sni": "claromusica.com",
+      "payload": "GET http://claromusica.com/ HTTP/1.1[crlf]Host: claromusica.com[crlf][split]CONNECT [host_port] HTTP/1.1[crlf]Host: [host][crlf][crlf]",
+      "fragmentSize": 12
+    },
+    {
+      "id": "tim_cloudflare_split",
+      "name": "TIM — Cloudflare Instant-Split ACL/GET (tim.com.br)",
+      "carrier": "TIM BR",
+      "badge": "CLÁSSICO TIM",
+      "mode": "http_payload",
+      "sni": "tim.com.br",
+      "payload": "ACL / HTTP/1.1[crlf]Host: [host][crlf][instant_split]GET / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]",
+      "fragmentSize": 16
+    },
+    {
+      "id": "tim_c6bank_sni",
+      "name": "TIM — Parceria C6 Bank Zero-Rating (SSL/TLS + WebSocket)",
+      "carrier": "TIM BR",
+      "badge": "PARCEIRO ZERO-RATING",
+      "mode": "ssl_payload_ws",
+      "sni": "c6bank.com.br",
+      "payload": "GET / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]",
+      "fragmentSize": 12
+    },
+    {
+      "id": "tim_recarga_portal",
+      "name": "TIM — Portal Recarga / Meu TIM (Delay-Split Bypass)",
+      "carrier": "TIM BR",
+      "badge": "PORTAL CATIVO",
+      "mode": "http_payload",
+      "sni": "recarga.tim.com.br",
+      "payload": "PATCH / HTTP/1.1[crlf]Host: recarga.tim.com.br[crlf][delay_split]GET / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf][crlf]",
+      "fragmentSize": 16
+    },
+    {
+      "id": "tim_ampli_edu",
+      "name": "TIM — Ampli / Descomplica Educação SNI Fronting",
+      "carrier": "TIM BR",
+      "badge": "SNI EDUCAÇÃO",
+      "mode": "ssl_sni",
+      "sni": "ampli.com.br",
+      "payload": "",
+      "fragmentSize": 16
+    },
+    {
+      "id": "vivo_front_ws",
+      "name": "Vivo — AWS CloudFront / Meu Vivo WebSocket Upgrade",
+      "carrier": "Vivo BR",
+      "badge": "CLOUDFRONT",
+      "mode": "http_payload",
+      "sni": "meu.vivo.com.br",
+      "payload": "GET / HTTP/1.1[crlf]Host: [host][crlf]Connection: Upgrade[crlf]Upgrade: websocket[crlf][split]User-Agent: [ua][crlf][crlf]",
+      "fragmentSize": 16
+    },
+    {
+      "id": "vivo_azion_recarga",
+      "name": "Vivo — Azion Edge Portal Recarga (Split-Header)",
+      "carrier": "Vivo BR",
+      "badge": "AZION EDGE",
+      "mode": "http_payload",
+      "sni": "recarga.vivo.com.br",
+      "payload": "HEAD http://recarga.vivo.com.br/ HTTP/1.1[crlf]Host: recarga.vivo.com.br[crlf][instant_split]GET / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf][crlf]",
+      "fragmentSize": 12
+    },
+    {
+      "id": "vivo_easy_tls",
+      "name": "Vivo — Vivo Easy Zero-Rating + Split-TLS 10B",
+      "carrier": "Vivo BR",
+      "badge": "VIVO EASY",
+      "mode": "ssl_payload_ws",
+      "sni": "vivoeasy.com.br",
+      "payload": "GET / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf][crlf]",
+      "fragmentSize": 10
+    },
+    {
+      "id": "universal_whatsapp_meta",
+      "name": "Universal — WhatsApp Zero-Rating SNI + Fragmentação 8B",
+      "carrier": "Multi-Operadora",
+      "badge": "WHATSAPP BYPASS",
+      "mode": "direct_split",
+      "sni": "g.whatsapp.net",
+      "payload": "",
+      "fragmentSize": 8
+    },
+    {
+      "id": "universal_slowdns_doh",
+      "name": "Universal — DoH / DNS Tunnel Keep-Alive Fallback",
+      "carrier": "Multi-Operadora",
+      "badge": "CONTINGÊNCIA DNS",
+      "mode": "ssl_sni",
+      "sni": "dns.google",
+      "payload": "",
+      "fragmentSize": 12
+    }
+  ]
+}
