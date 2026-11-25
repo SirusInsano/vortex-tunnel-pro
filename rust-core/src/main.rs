@@ -1,6 +1,10 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::env;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::path::Path;
+use std::process::Command;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
@@ -82,6 +86,36 @@ fn run_self_test() {
     println!("\n=== [Rust Core] TODOS OS TESTES NATIVOS PASSARAM! ===");
 }
 
+#[cfg(target_os = "windows")]
+fn launch_native_app_window(url: &str) {
+    let app_arg = format!("--app={}", url);
+    let candidates = [
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    ];
+
+    for bin in candidates {
+        if Path::new(bin).exists() {
+            if let Ok(mut child) = Command::new(bin)
+                .args([
+                    &app_arg,
+                    "--window-size=430,820",
+                    "--new-window",
+                    "--disable-extensions",
+                ])
+                .spawn()
+            {
+                let _ = child.wait();
+                return;
+            }
+        }
+    }
+
+    let _ = Command::new("cmd").args(["/C", "start", "", url]).spawn();
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.iter().any(|a| a == "--test") {
@@ -94,12 +128,6 @@ fn main() {
         .and_then(|p| p.parse().ok())
         .unwrap_or(9091);
 
-    println!("=========================================================");
-    println!("   VORTEX TUNNEL PRO - 100% NATIVE RUST (v2.0)           ");
-    println!("   Painel Web Embutido: http://127.0.0.1:{}            ", ui_port);
-    println!("   SOCKS5: :10809 | HTTP Hotshare: :8081                 ");
-    println!("=========================================================");
-
     let stats = global_stats();
     let cfg = TunnelConfig {
         socks_port: 10809,
@@ -110,16 +138,8 @@ fn main() {
         ..TunnelConfig::default()
     };
 
-    start_embedded_ui_server(ui_port, Arc::clone(&stats)).expect("Erro iniciando WebUI Rust");
-    start_proxy_listeners(cfg, Arc::clone(&stats)).expect("Erro iniciando Proxy Rust");
-
-    #[cfg(target_os = "windows")]
-    {
-        let url = format!("http://127.0.0.1:{}", ui_port);
-        let _ = std::process::Command::new("cmd")
-            .args(["/C", "start", "", &url])
-            .spawn();
-    }
+    let _ = start_embedded_ui_server(ui_port, Arc::clone(&stats));
+    let _ = start_proxy_listeners(cfg, Arc::clone(&stats));
 
     stats.keepalive_active.store(true, Ordering::SeqCst);
     let stats_ka = Arc::clone(&stats);
@@ -129,6 +149,12 @@ fn main() {
         }
         thread::sleep(Duration::from_secs(20));
     });
+
+    #[cfg(target_os = "windows")]
+    {
+        let url = format!("http://127.0.0.1:{}", ui_port);
+        launch_native_app_window(&url);
+    }
 
     loop {
         thread::sleep(Duration::from_secs(60));
