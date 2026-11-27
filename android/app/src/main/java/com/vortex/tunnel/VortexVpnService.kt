@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -13,11 +14,12 @@ import android.os.PowerManager
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Immortal Android Foreground Service + WakeLock + Native Rust Core (`libvortex_core.so`).
- * Protections against Android / HyperOS background killing:
- *  1. Persistent Foreground Service Notification (startForeground) with Ongoing flag
- *  2. PARTIAL_WAKE_LOCK so CPU never suspends the 20s Rust Keep-Alive when screen is locked
- *  3. stopWithTask="false" + onTaskRemoved auto-revive so swiping the app away keeps the tunnel alive
+ * Immortal Android VpnService + Foreground Notification + WakeLock + Native Rust Core (`libvortex_core.so`).
+ * - Calls `Builder().establish()` so Android activates the `[VPN]` icon in the status bar
+ * - Injects `ProxyInfo.buildDirectProxy("127.0.0.1", 8081)` into the Android VPN bearer so system apps
+ *   automatically route through the Rust Mid-SNI Split-TLS & Payload engine on 127.0.0.1:8081
+ * - Excludes DragonVortex itself (`addDisallowedApplication(packageName)`) so Rust sockets go straight
+ *   out the 4.5G/5G cellular interface (`rmnet_data0`) without routing loops.
  */
 class VortexVpnService : VpnService() {
 
@@ -32,10 +34,51 @@ class VortexVpnService : VpnService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val action = intent?.action ?: ACTION_START
+        if (action == ACTION_STOP) {
+            teardownVpnInterface()
+            return START_STICKY
+        }
+
         acquireWakeLock()
         promoteToForeground()
         bootRustCoreIfNeeded()
+        establishVpnInterface()
         return START_STICKY
+    }
+
+    private fun establishVpnInterface() {
+        if (vpnInterface != null) return
+        try {
+            val builder = Builder()
+                .setSession("DragonVortex")
+                .setMtu(1500)
+                .addAddress("10.0.0.2", 32)
+                .addDnsServer("8.8.8.8")
+                .addDnsServer("1.1.1.1")
+
+            // Route system traffic through our local Rust Split-TLS & Payload proxy on 127.0.0.1:8081
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", 8081))
+            }
+
+            // Exclude our own package so the Rust engine talks directly to the 4.5G/5G radio antenna
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (_: Throwable) {
+            }
+
+            vpnInterface = builder.establish()
+        } catch (_: Throwable) {
+        }
+    }
+
+    private fun teardownVpnInterface() {
+        try {
+            vpnInterface?.close()
+        } catch (_: Throwable) {
+        }
+        vpnInterface = null
     }
 
     private fun bootRustCoreIfNeeded() {
@@ -53,7 +96,7 @@ class VortexVpnService : VpnService() {
                 val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
                 wakeLock = pm.newWakeLock(
                     PowerManager.PARTIAL_WAKE_LOCK,
-                    "VortexPro::RustKeepAliveLock"
+                    "DragonVortex::RustKeepAliveLock"
                 ).apply {
                     setReferenceCounted(false)
                     acquire()
@@ -72,10 +115,10 @@ class VortexVpnService : VpnService() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
                     channelId,
-                    "Vortex Pro • Motor Rust em Segundo Plano",
+                    "DragonVortex • Motor Rust em Segundo Plano",
                     NotificationManager.IMPORTANCE_LOW
                 ).apply {
-                    description = "Mantém o túnel e o segurador de sessão 4.5G/5G ativos sem fechar"
+                    description = "Mantém o túnel VPN e o segurador de sessão 4.5G/5G ativos"
                     setShowBadge(false)
                 }
                 nm.createNotificationChannel(channel)
@@ -99,8 +142,8 @@ class VortexVpnService : VpnService() {
             }
 
             val notification = builder
-                .setContentTitle("DragonVortex • Conexão Protegida")
-                .setContentText("Motor Rust ativo em 2º plano (Segurando 4.5G/5G)")
+                .setContentTitle("DragonVortex • VPN Ativa")
+                .setContentText("Motor Rust + Split-TLS ativo em 2º plano (4.5G/5G)")
                 .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
@@ -112,8 +155,9 @@ class VortexVpnService : VpnService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // If user swipes the app card away from Recents, immediately re-assert foreground service
-        val restartIntent = Intent(applicationContext, VortexVpnService::class.java)
+        val restartIntent = Intent(applicationContext, VortexVpnService::class.java).apply {
+            action = ACTION_START
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             applicationContext.startForegroundService(restartIntent)
         } else {
@@ -129,14 +173,13 @@ class VortexVpnService : VpnService() {
             }
         } catch (_: Throwable) {
         }
-        try {
-            vpnInterface?.close()
-        } catch (_: Exception) {
-        }
+        teardownVpnInterface()
         super.onDestroy()
     }
 
     companion object {
+        const val ACTION_START = "com.vortex.tunnel.START"
+        const val ACTION_STOP = "com.vortex.tunnel.STOP"
         private val rustInitialized = AtomicBoolean(false)
 
         init {

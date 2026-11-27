@@ -15,16 +15,10 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.concurrent.thread
 
-/**
- * DragonVortex MainActivity with 100% In-App Over-The-Air (OTA) Hot-Updater.
- * Updates the entire UI, scripts, and carrier breaches directly inside the app
- * from GitHub WITHOUT ever needing to download or install another .apk file!
- */
 class MainActivity : Activity() {
 
     private lateinit var webView: WebView
@@ -36,12 +30,9 @@ class MainActivity : Activity() {
         window.navigationBarColor = Color.parseColor("#090D16")
 
         requestBatteryExemptionIfNeeded()
-        startVortexService()
 
-        val vpnIntent = VpnService.prepare(this)
-        if (vpnIntent != null) {
-            startActivityForResult(vpnIntent, 100)
-        }
+        // Request Android VPN permission and immediately start VpnService (shows [VPN] icon in top bar!)
+        ensureVpnPermissionAndStart()
 
         webView = WebView(this)
         webView.setBackgroundColor(Color.parseColor("#06080E"))
@@ -51,22 +42,40 @@ class MainActivity : Activity() {
         settings.cacheMode = WebSettings.LOAD_NO_CACHE
         webView.webViewClient = WebViewClient()
 
-        // Expose native OTA Hot-Update bridge to JavaScript
         webView.addJavascriptInterface(OtaBridge(), "DragonNativeOTA")
 
         setContentView(webView)
 
         webView.postDelayed({
             webView.loadUrl("http://127.0.0.1:9091")
-            // Check for background silent OTA update from GitHub
             pullSilentOtaFromGithub(false)
         }, 350)
+    }
+
+    private fun ensureVpnPermissionAndStart() {
+        val vpnIntent = VpnService.prepare(this)
+        if (vpnIntent != null) {
+            startActivityForResult(vpnIntent, 100)
+        } else {
+            sendVpnServiceAction(VortexVpnService.ACTION_START)
+        }
     }
 
     inner class OtaBridge {
         @JavascriptInterface
         fun triggerHotUpdate() {
             pullSilentOtaFromGithub(true)
+        }
+
+        @JavascriptInterface
+        fun setVpnTunnelState(enable: Boolean) {
+            runOnUiThread {
+                if (enable) {
+                    ensureVpnPermissionAndStart()
+                } else {
+                    sendVpnServiceAction(VortexVpnService.ACTION_STOP)
+                }
+            }
         }
     }
 
@@ -80,7 +89,6 @@ class MainActivity : Activity() {
                 if (conn.responseCode == 200) {
                     val html = conn.inputStream.bufferedReader().use { it.readText() }
                     if (html.contains("DRAGON VORTEX")) {
-                        // Push the hot-updated UI directly into the local Rust server memory so http://127.0.0.1:9091 serves it!
                         val postUrl = URL("http://127.0.0.1:9091/api/ota/hotpatch")
                         val postConn = postUrl.openConnection() as HttpURLConnection
                         postConn.requestMethod = "POST"
@@ -118,15 +126,17 @@ class MainActivity : Activity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        startVortexService()
+        sendVpnServiceAction(VortexVpnService.ACTION_START)
         webView.postDelayed({
             webView.loadUrl("http://127.0.0.1:9091")
         }, 300)
     }
 
-    private fun startVortexService() {
+    private fun sendVpnServiceAction(actionStr: String) {
         try {
-            val intent = Intent(this, VortexVpnService::class.java)
+            val intent = Intent(this, VortexVpnService::class.java).apply {
+                action = actionStr
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(intent)
             } else {

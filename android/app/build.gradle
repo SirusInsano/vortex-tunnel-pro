@@ -11,8 +11,8 @@ android {
         applicationId "com.vortex.tunnel"
         minSdk 24
         targetSdk 34
-        versionCode 26
-        versionName "2.6.0-OTA"
+        versionCode 27
+        versionName "2.7.0-VPN"
 
         ndk {
             abiFilters "arm64-v8a"

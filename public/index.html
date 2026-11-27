@@ -807,12 +807,18 @@
 
     async function oneTapConnect() {
       if (state.active) {
+        if (window.DragonNativeOTA && window.DragonNativeOTA.setVpnTunnelState) {
+          window.DragonNativeOTA.setVpnTunnelState(false);
+        }
         await Promise.all([
           fetch('/api/tunnel/stop', { method: 'POST' }),
           fetch('/api/keepalive/stop', { method: 'POST' })
         ]);
         refreshStatus();
       } else {
+        if (window.DragonNativeOTA && window.DragonNativeOTA.setVpnTunnelState) {
+          window.DragonNativeOTA.setVpnTunnelState(true);
+        }
         await startBothEngines();
       }
     }
