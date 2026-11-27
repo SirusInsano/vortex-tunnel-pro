@@ -15,9 +15,6 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import java.net.HttpURLConnection
-import java.net.URL
-import kotlin.concurrent.thread
 
 class MainActivity : Activity() {
 
@@ -30,8 +27,6 @@ class MainActivity : Activity() {
         window.navigationBarColor = Color.parseColor("#090D16")
 
         requestBatteryExemptionIfNeeded()
-
-        // Request Android VPN permission and immediately start VpnService (shows [VPN] icon in top bar!)
         ensureVpnPermissionAndStart()
 
         webView = WebView(this)
@@ -44,12 +39,25 @@ class MainActivity : Activity() {
 
         webView.addJavascriptInterface(OtaBridge(), "DragonNativeOTA")
 
+        webView.setDownloadListener { url, _, _, _, _ ->
+            openExternalDownload(url)
+        }
+
         setContentView(webView)
 
         webView.postDelayed({
             webView.loadUrl("http://127.0.0.1:9091")
-            pullSilentOtaFromGithub(false)
         }, 350)
+    }
+
+    private fun openExternalDownload(url: String) {
+        try {
+            val dlIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(dlIntent)
+        } catch (_: Throwable) {
+        }
     }
 
     private fun ensureVpnPermissionAndStart() {
@@ -63,8 +71,10 @@ class MainActivity : Activity() {
 
     inner class OtaBridge {
         @JavascriptInterface
-        fun triggerHotUpdate() {
-            pullSilentOtaFromGithub(true)
+        fun downloadAndInstallApk(apkUrl: String) {
+            runOnUiThread {
+                openExternalDownload(apkUrl)
+            }
         }
 
         @JavascriptInterface
@@ -75,35 +85,6 @@ class MainActivity : Activity() {
                 } else {
                     sendVpnServiceAction(VortexVpnService.ACTION_STOP)
                 }
-            }
-        }
-    }
-
-    private fun pullSilentOtaFromGithub(forceReload: Boolean) {
-        thread {
-            try {
-                val url = URL("https://raw.githubusercontent.com/SirusInsano/vortex-tunnel-pro/main/public/index.html?t=${System.currentTimeMillis()}")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 5000
-                conn.readTimeout = 5000
-                if (conn.responseCode == 200) {
-                    val html = conn.inputStream.bufferedReader().use { it.readText() }
-                    if (html.contains("DRAGON VORTEX")) {
-                        val postUrl = URL("http://127.0.0.1:9091/api/ota/hotpatch")
-                        val postConn = postUrl.openConnection() as HttpURLConnection
-                        postConn.requestMethod = "POST"
-                        postConn.doOutput = true
-                        postConn.outputStream.use { it.write(html.toByteArray(Charsets.UTF_8)) }
-                        postConn.responseCode
-
-                        if (forceReload) {
-                            runOnUiThread {
-                                webView.reload()
-                            }
-                        }
-                    }
-                }
-            } catch (_: Throwable) {
             }
         }
     }

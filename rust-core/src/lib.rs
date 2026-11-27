@@ -709,29 +709,7 @@ fn handle_ui_http_request(mut stream: TcpStream, stats: Arc<EngineStats>) {
     }
 
     if path == "/" || path == "/index.html" {
-        if let Ok(guard) = stats.hotpatched_html.lock() {
-            if let Some(ref custom_html) = *guard {
-                send_http_response(stream, "200 OK", "text/html; charset=utf-8", custom_html.as_bytes());
-                return;
-            }
-        }
         send_http_response(stream, "200 OK", "text/html; charset=utf-8", INDEX_HTML.as_bytes());
-        return;
-    }
-
-    if path == "/api/ota/hotpatch" && method == "POST" {
-        if let Some(body_idx) = req.find("\r\n\r\n") {
-            let html_body = &req[body_idx + 4..];
-            if html_body.len() > 200 {
-                if let Ok(mut guard) = stats.hotpatched_html.lock() {
-                    *guard = Some(html_body.to_string());
-                }
-                stats.log("[Rust OTA Hot-Update] Interface e Brechas atualizadas na memória sem precisar baixar APK!");
-                send_http_response(stream, "200 OK", "application/json", br#"{"ok":true}"#);
-                return;
-            }
-        }
-        send_http_response(stream, "400 Bad Request", "application/json", br#"{"ok":false}"#);
         return;
     }
     if path == "/manifest.json" {

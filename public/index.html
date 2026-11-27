@@ -559,7 +559,7 @@
   </nav>
 
   <script>
-    const LOCAL_APP_BUILD = 28;
+    const LOCAL_APP_BUILD = 29;
     const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/SirusInsano/vortex-tunnel-pro/main';
 
     let state = {
@@ -570,38 +570,20 @@
     };
     let clientPulseTimer = null;
 
-    // Aplica atualização 100% dentro do próprio aplicativo (Hot-Patch no motor Rust + localStorage) SEM baixar outro APK!
-    async function applyInAppHotUpdate() {
-      const btn = document.getElementById('newApkLink');
-      const otaText = document.getElementById('otaStatusText');
-      if (btn) btn.textContent = 'ATUALIZANDO...';
-      otaText.innerHTML = 'Aplicando atualização interna (Sem baixar APK)...';
-
-      try {
-        const htmlRes = await fetch(`${GITHUB_RAW_BASE}/public/index.html?t=${Date.now()}`, { cache: 'no-store' });
-        if (htmlRes.ok) {
-          const newHtml = await htmlRes.text();
-          await fetch('/api/ota/hotpatch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-            body: newHtml
-          });
-        }
-        if (window.DragonNativeOTA && window.DragonNativeOTA.triggerHotUpdate) {
-          window.DragonNativeOTA.triggerHotUpdate();
-        }
-        document.getElementById('apkUpdateBanner').classList.remove('show');
-        otaText.innerHTML = '<b>Atualizado Internamente com Sucesso ✓</b>';
-        setTimeout(() => window.location.reload(), 500);
-      } catch (e) {
-        otaText.innerHTML = '<b>Brechas OTA Sincronizadas ✓</b>';
+    function applyInAppHotUpdate() {
+      const apkUrl = 'https://github.com/SirusInsano/vortex-tunnel-pro/releases/latest/download/VortexTunnelPro.apk';
+      if (window.DragonNativeOTA && window.DragonNativeOTA.downloadAndInstallApk) {
+        window.DragonNativeOTA.downloadAndInstallApk(apkUrl);
+      } else {
+        window.open(apkUrl, '_blank');
       }
     }
 
-    // 1. Auto-Update OTA de Brechas e Interface (100% dentro do app, sem baixar nem instalar outro APK!)
+    // 1. Auto-Update OTA de Brechas (cloud-configs.json atualiza sem precisar baixar APK!)
+    // 2. Quando muda o motor nativo Rust/Android (version.json), abre o instalador com 1 toque sem dar erro de pacote!
     async function checkCloudUpdates(manual = false) {
       const otaText = document.getElementById('otaStatusText');
-      if (manual) otaText.innerHTML = 'Sincronizando com a nuvem GitHub...';
+      if (manual) otaText.innerHTML = 'Sincronizando brechas com a nuvem...';
 
       try {
         const [cfgRes, verRes] = await Promise.all([
@@ -621,18 +603,13 @@
 
         if (verRes.ok) {
           const verData = await verRes.json();
-          const appliedBuild = Number(localStorage.getItem('dragon_vortex_ota_build') || LOCAL_APP_BUILD);
-          if (verData.build && Number(verData.build) > appliedBuild) {
-            localStorage.setItem('dragon_vortex_ota_build', String(verData.build));
+          if (verData.build && Number(verData.build) > LOCAL_APP_BUILD) {
             const banner = document.getElementById('apkUpdateBanner');
-            document.getElementById('newApkTitle').textContent = `Atualização Interna v${verData.version} Pronta!`;
-            document.getElementById('newApkNotes').textContent = verData.notes || 'Atualiza em 1 segundo sem baixar APK';
+            document.getElementById('newApkTitle').textContent = `Novo Motor v${verData.version} Disponível!`;
+            document.getElementById('newApkNotes').textContent = verData.notes || 'Instala direto por cima sem conflito';
             banner.classList.add('show');
-            if (manual) {
-              await applyInAppHotUpdate();
-            }
           } else if (manual) {
-            otaText.innerHTML = `App Atualizado: <b>v${verData.version} (OTA Interno Ativo) ✓</b>`;
+            otaText.innerHTML = `DragonVortex <b>v${verData.version} Atualizado ✓</b>`;
           }
         }
       } catch (e) {
