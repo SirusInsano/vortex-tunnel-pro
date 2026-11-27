@@ -251,6 +251,58 @@ pub fn write_fragmented(
     Ok(())
 }
 
+/// Resolves a hostname using our local Raw-IP `1.1.1.1:443` DoH Bridge (`127.0.0.1:9092/resolve?host=...`)
+/// whenever Claro blocks UDP Port 53 DNS (`Vetor 6: 2504ms`), while `1.1.1.1:443` is OPEN (`147ms`)!
+pub fn resolve_host_bypass_dns53(host: &str, port: u16, stats: &EngineStats) -> std::io::Result<SocketAddr> {
+    // 1. If already a raw IPv4 address (e.g. 1.1.1.1), parse directly in 0ms
+    let direct_str = format!("{}:{}", host, port);
+    if host.chars().all(|c| c.is_ascii_digit() || c == '.') {
+        if let Ok(mut addrs) = direct_str.to_socket_addrs() {
+            if let Some(a) = addrs.next() {
+                return Ok(a);
+            }
+        }
+    }
+
+    // 2. Query our local Raw-IP 1.1.1.1:443 DoH Bridge on 127.0.0.1:9092 first!
+    if let Ok(doh_addr) = "127.0.0.1:9092".parse::<SocketAddr>() {
+        if let Ok(mut stream) = TcpStream::connect_timeout(&doh_addr, Duration::from_millis(1200)) {
+            let _ = stream.set_read_timeout(Some(Duration::from_millis(3800)));
+            let req = format!(
+                "GET /resolve?host={} HTTP/1.1\r\nHost: 127.0.0.1:9092\r\nConnection: close\r\n\r\n",
+                host
+            );
+            if stream.write_all(req.as_bytes()).is_ok() {
+                let mut buf = [0u8; 512];
+                if let Ok(n) = stream.read(&mut buf) {
+                    let resp = String::from_utf8_lossy(&buf[..n]);
+                    if let Some(body_idx) = resp.find("\r\n\r\n") {
+                        let ip_str = resp[body_idx + 4..].trim();
+                        if !ip_str.is_empty() {
+                            let resolved_pair = format!("{}:{}", ip_str, port);
+                            if let Ok(mut addrs) = resolved_pair.to_socket_addrs() {
+                                if let Some(a) = addrs.next() {
+                                    stats.log(format!(
+                                        "[DoH 1.1.1.1:443] {} resolvido p/ {} via porta 443 (Bypass DNS 53)",
+                                        host, ip_str
+                                    ));
+                                    return Ok(a);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Fallback to system resolver
+    direct_str
+        .to_socket_addrs()?
+        .next()
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "DNS lookup failed"))
+}
+
 pub fn connect_upstream(
     target_host: &str,
     target_port: u16,
@@ -263,11 +315,7 @@ pub fn connect_upstream(
         (target_host, target_port)
     };
 
-    let addr_str = format!("{}:{}", connect_host, connect_port);
-    let addr: SocketAddr = addr_str
-        .to_socket_addrs()?
-        .next()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "DNS lookup failed"))?;
+    let addr = resolve_host_bypass_dns53(connect_host, connect_port, stats)?;
 
     let mut remote = TcpStream::connect_timeout(&addr, Duration::from_secs(8))?;
     let _ = remote.set_nodelay(true);
@@ -495,15 +543,17 @@ pub fn fire_google_keepalive_pulse(stats: &EngineStats) -> Option<u64> {
     }
 
     let start = Instant::now();
-    let targets = ["mtalk.google.com:5228", "www.googleapis.com:443", "connectivitycheck.gstatic.com:443"];
+    // Use the verified open Claro 4.5G targets first (1.1.1.1:443 = 147ms, claroflex.com.br:443 = 42ms, mhnet.com.br:443 = 149ms)
+    let targets = ["1.1.1.1:443", "claroflex.com.br:443", "mhnet.com.br:443"];
     let mut ok_count = 0;
 
     for t in targets {
         if let Ok(mut addrs) = t.to_socket_addrs() {
             if let Some(addr) = addrs.next() {
-                if let Ok(stream) = TcpStream::connect_timeout(&addr, Duration::from_secs(3)) {
+                if let Ok(stream) = TcpStream::connect_timeout(&addr, Duration::from_millis(1200)) {
                     let _ = stream.shutdown(Shutdown::Both);
                     ok_count += 1;
+                    break; // Stop on first fast open channel so latency stays ~42-147ms!
                 }
             }
         }

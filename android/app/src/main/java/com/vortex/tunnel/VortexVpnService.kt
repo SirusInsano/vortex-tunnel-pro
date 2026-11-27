@@ -11,15 +11,29 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import javax.net.ssl.SNIHostName
+import javax.net.ssl.SSLParameters
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.SSLSocketFactory
+import kotlin.concurrent.thread
 
 /**
- * Immortal Android VpnService + Foreground Notification + WakeLock + Native Rust Core (`libvortex_core.so`).
- * - Calls `Builder().establish()` so Android activates the `[VPN]` icon in the status bar
- * - Injects `ProxyInfo.buildDirectProxy("127.0.0.1", 8081)` into the Android VPN bearer so system apps
- *   automatically route through the Rust Mid-SNI Split-TLS & Payload engine on 127.0.0.1:8081
- * - Excludes DragonVortex itself (`addDisallowedApplication(packageName)`) so Rust sockets go straight
- *   out the 4.5G/5G cellular interface (`rmnet_data0`) without routing loops.
+ * DragonVortex v2.8 — Immortal VpnService + Raw-IP 1.1.1.1:443 DoH DNS Bypass + Rust Split-TLS Core.
+ *
+ * Key breakthrough from Claro 4.5G audit:
+ * - Claro blocks UDP/TCP Port 53 DNS (8.8.8.8:53 timeouts at 2504ms),
+ *   WHILE raw IP TCP Port 443 (`1.1.1.1:443` = 147ms, `claroflex.com.br:443` = 42ms, `mhnet.com.br:443` = 149ms) is OPEN!
+ * - This service runs a local DNS-over-HTTPS (DoH) bridge on 127.0.0.1:9092 that connects directly
+ *   to the raw IP `1.1.1.1:443` (and `1.0.0.1:443`) without using Port 53 DNS at all, resolving any domain
+ *   for the Rust Split-TLS proxy!
  */
 class VortexVpnService : VpnService() {
 
@@ -30,6 +44,7 @@ class VortexVpnService : VpnService() {
         super.onCreate()
         acquireWakeLock()
         promoteToForeground()
+        startRawIpDohBridgeIfNeeded()
         bootRustCoreIfNeeded()
     }
 
@@ -42,6 +57,7 @@ class VortexVpnService : VpnService() {
 
         acquireWakeLock()
         promoteToForeground()
+        startRawIpDohBridgeIfNeeded()
         bootRustCoreIfNeeded()
         establishVpnInterface()
         return START_STICKY
@@ -53,16 +69,18 @@ class VortexVpnService : VpnService() {
             val builder = Builder()
                 .setSession("DragonVortex")
                 .setMtu(1500)
-                .addAddress("10.0.0.2", 32)
-                .addDnsServer("8.8.8.8")
+                .addAddress("10.88.0.2", 24)
+                // Critical: Android requires at least one route on tun0 to display the [VPN] status bar icon
+                // and bind ProxyInfo to the active network! We route only the virtual 10.88.0.0/16 subnet
+                // into tun0 while global HTTP/HTTPS traffic is redirected into our Rust proxy 127.0.0.1:8081.
+                .addRoute("10.88.0.0", 16)
                 .addDnsServer("1.1.1.1")
+                .addDnsServer("8.8.8.8")
 
-            // Route system traffic through our local Rust Split-TLS & Payload proxy on 127.0.0.1:8081
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", 8081))
             }
 
-            // Exclude our own package so the Rust engine talks directly to the 4.5G/5G radio antenna
             try {
                 builder.addDisallowedApplication(packageName)
             } catch (_: Throwable) {
@@ -79,6 +97,104 @@ class VortexVpnService : VpnService() {
         } catch (_: Throwable) {
         }
         vpnInterface = null
+    }
+
+    /**
+     * Resolves a domain name over raw IP `1.1.1.1:443` (Cloudflare DoH JSON API)
+     * completely bypassing Claro's blocked Port 53 DNS!
+     */
+    private fun resolveDomainOver1111Port443(domain: String): String? {
+        val clean = domain.trim().lowercase()
+        dnsCache[clean]?.let { return it }
+
+        val rawDohIps = arrayOf("1.1.1.1", "1.0.0.1")
+        for (dohIp in rawDohIps) {
+            var sslSock: SSLSocket? = null
+            try {
+                val rawSock = Socket()
+                protect(rawSock)
+                rawSock.tcpNoDelay = true
+                rawSock.connect(InetSocketAddress(dohIp, 443), 3500)
+                rawSock.soTimeout = 3500
+
+                val factory = SSLSocketFactory.getDefault() as SSLSocketFactory
+                sslSock = factory.createSocket(rawSock, "cloudflare-dns.com", 443, true) as SSLSocket
+                val params = SSLParameters()
+                params.serverNames = listOf(SNIHostName("cloudflare-dns.com"))
+                sslSock.sslParameters = params
+                sslSock.startHandshake()
+
+                val req = "GET /dns-query?name=$clean&type=A HTTP/1.1\r\n" +
+                        "Host: cloudflare-dns.com\r\n" +
+                        "Accept: application/dns-json\r\n" +
+                        "Connection: close\r\n\r\n"
+                sslSock.outputStream.write(req.toByteArray(Charsets.US_ASCII))
+                sslSock.outputStream.flush()
+
+                val resp = BufferedReader(InputStreamReader(sslSock.inputStream, Charsets.UTF_8)).readText()
+                val jsonStart = resp.indexOf('{')
+                if (jsonStart >= 0) {
+                    val json = JSONObject(resp.substring(jsonStart))
+                    val answers = json.optJSONArray("Answer")
+                    if (answers != null) {
+                        for (i in 0 until answers.length()) {
+                            val ans = answers.getJSONObject(i)
+                            if (ans.optInt("type") == 1) {
+                                val ip = ans.optString("data", "")
+                                if (ip.isNotEmpty()) {
+                                    dnsCache[clean] = ip
+                                    return ip
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (_: Throwable) {
+            } finally {
+                try { sslSock?.close() } catch (_: Throwable) {}
+            }
+        }
+        return null
+    }
+
+    private fun startRawIpDohBridgeIfNeeded() {
+        if (dohBridgeStarted.getAndSet(true)) return
+        // Pre-seed critical hosts so they resolve in 0ms
+        dnsCache["1.1.1.1"] = "1.1.1.1"
+        dnsCache["mhnet.com.br"] = "170.247.195.132"
+
+        thread(name = "DragonDohBridge") {
+            try {
+                val server = ServerSocket()
+                server.reuseAddress = true
+                server.bind(InetSocketAddress("127.0.0.1", 9092))
+                while (true) {
+                    val client = server.accept()
+                    thread {
+                        try {
+                            client.soTimeout = 4000
+                            val reader = BufferedReader(InputStreamReader(client.getInputStream()))
+                            val line = reader.readLine() ?: ""
+                            // Expected: GET /resolve?host=example.com HTTP/1.1
+                            val hostParam = line.substringAfter("host=", "").substringBefore(" ").substringBefore("&").trim()
+                            val resolvedIp = if (hostParam.isNotEmpty()) {
+                                resolveDomainOver1111Port443(hostParam) ?: ""
+                            } else ""
+
+                            val body = resolvedIp.toByteArray(Charsets.UTF_8)
+                            val hdr = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${body.size}\r\nConnection: close\r\n\r\n"
+                            client.getOutputStream().write(hdr.toByteArray(Charsets.US_ASCII))
+                            client.getOutputStream().write(body)
+                            client.getOutputStream().flush()
+                        } catch (_: Throwable) {
+                        } finally {
+                            try { client.close() } catch (_: Throwable) {}
+                        }
+                    }
+                }
+            } catch (_: Throwable) {
+            }
+        }
     }
 
     private fun bootRustCoreIfNeeded() {
@@ -142,8 +258,8 @@ class VortexVpnService : VpnService() {
             }
 
             val notification = builder
-                .setContentTitle("DragonVortex • VPN Ativa")
-                .setContentText("Motor Rust + Split-TLS ativo em 2º plano (4.5G/5G)")
+                .setContentTitle("DragonVortex • VPN + DoH 443 Ativo")
+                .setContentText("Bypass DNS 1.1.1.1:443 + Split-TLS ativo em 2º plano")
                 .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
@@ -181,6 +297,8 @@ class VortexVpnService : VpnService() {
         const val ACTION_START = "com.vortex.tunnel.START"
         const val ACTION_STOP = "com.vortex.tunnel.STOP"
         private val rustInitialized = AtomicBoolean(false)
+        private val dohBridgeStarted = AtomicBoolean(false)
+        private val dnsCache = ConcurrentHashMap<String, String>()
 
         init {
             try {

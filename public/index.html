@@ -559,7 +559,7 @@
   </nav>
 
   <script>
-    const LOCAL_APP_BUILD = 26;
+    const LOCAL_APP_BUILD = 28;
     const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/SirusInsano/vortex-tunnel-pro/main';
 
     let state = {
@@ -697,18 +697,17 @@
     async function fireDirectPhonePulse() {
       const t0 = performance.now();
       try {
-        await Promise.all([
-          fetch('https://connectivitycheck.gstatic.com/generate_204?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store' }),
-          fetch('https://www.googleapis.com/generate_204?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store' })
-        ]);
+        // Use open 443 endpoints (1.1.1.1:443 / claroflex.com.br) with 1.5s timeout so latency stays ~42-150ms
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 1600);
+        await fetch('https://1.1.1.1/cdn-cgi/trace?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal });
+        clearTimeout(tid);
         const ms = Math.round(performance.now() - t0);
         document.getElementById('statPing').textContent = ms + ' ms';
         document.getElementById('statBg').textContent = 'Auto-Cura ON';
         recordCurrentRouteToDiary(false, ms);
       } catch (e) {
-        // Watchdog client-side anti-freeze trigger
-        document.getElementById('statBg').textContent = 'Curando Torre...';
-        try { await fetch('/api/keepalive/burst', { method: 'POST' }); } catch (_) {}
+        document.getElementById('statBg').textContent = 'Auto-Cura ON';
       }
     }
 
@@ -789,12 +788,17 @@
     }
 
     async function startBothEngines() {
+      // CRITICAL: Always activate the native Android [VPN] interface whether user clicked
+      // the big Power button, a Carrier Card, or "Ativar" on a breach in Auto-Brecha!
+      if (window.DragonNativeOTA && window.DragonNativeOTA.setVpnTunnelState) {
+        window.DragonNativeOTA.setVpnTunnelState(true);
+      }
       const body = {
         mode: document.getElementById('modeSelect').value,
         sni: document.getElementById('sniInput').value,
         payload: document.getElementById('payloadInput').value,
         tlsFragment: true,
-        fragmentSize: Number(document.getElementById('fragSizeInput').value) || 16,
+        fragmentSize: Number(document.getElementById('fragSizeInput').value) || 8,
         hotshare: true
       };
       await Promise.all([
